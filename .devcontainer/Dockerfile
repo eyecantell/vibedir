@@ -39,6 +39,7 @@ RUN pip install --no-cache-dir \
     ruff \
     GitPython \
     pytest \ 
-    prepdir
+    prepdir \
+    applydir
 
-RUN git config --global --add safe.directory /mounted/dev/applydir
+RUN git config --global --add safe.directory /mounted/dev/vibedir

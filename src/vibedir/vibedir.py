@@ -59,7 +59,7 @@ def main():
     parser.add_argument("--output", default="modified_prepped_dir.txt", help="Output file for modified content")
     parser.add_argument("--request", required=True, help="Change request for Grok 3 (e.g., 'Refactor test_file.py')")
     parser.add_argument("--manual", action="store_true", help="Output prompt for manual editing instead of API call")
-    parser.add_argument("--config", default="vibedir.yaml", help="Path to configuration file")
+    parser.add_argument("--config", default="src/vibedir/vibedir.yaml", help="Path to configuration file")
     args = parser.parse_args()
 
     # Load configuration

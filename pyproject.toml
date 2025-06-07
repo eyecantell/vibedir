@@ -1,7 +1,7 @@
 [project]
 name = "vibedir"
-version = "0.1.1"
-description = "Utility to prompt for and apply changes to a code base. Leverages prepdir and vibedir."
+version = "0.1.0"
+description = "Utility to prompt for and apply changes to a code base using prepdir and applydir."
 readme = "README.md"
 authors = [
     {name = "eyecantell", email = "paul@pneuma.solutions"},
@@ -42,7 +42,8 @@ dependencies = [
     "typing-extensions>=4.7.1; python_version < '3.11'",
     "importlib-resources>=5.0; python_version < '3.9'",
     "pyyaml>=6.0",
-    "prepdir>=0.9.0",
+    "prepdir>=0.9.0", 
+    "applydir>=0.1.0", 
 ]
 
 [project.optional-dependencies]
@@ -67,7 +68,7 @@ build-backend = "pdm.backend"
 [tool.pdm]
 distribution = true
 package-dir = "src"
-includes = ["src/vibedir", "src/vibedir/config.yaml"]
+includes = ["src/vibedir", "src/vibedir/vibedir.yaml"]
 
 [tool.pdm.dev-dependencies]
 test = [
