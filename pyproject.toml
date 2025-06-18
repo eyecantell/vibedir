@@ -42,8 +42,10 @@ dependencies = [
     "typing-extensions>=4.7.1; python_version < '3.11'",
     "importlib-resources>=5.0; python_version < '3.9'",
     "pyyaml>=6.0",
-    "prepdir>=0.9.0", 
-    "applydir>=0.1.0", 
+    "prepdir>=0.9.0",
+    "applydir>=0.1.0",
+    "openai>=1.84.0",
+    "dynaconf>=3.2.6",
 ]
 
 [project.optional-dependencies]
@@ -54,7 +56,7 @@ test = [
 ]
 
 [project.scripts]
-vibedir = "vibedir.main:main"
+vibedir = "vibedir.vibedir:main"
 
 [project.urls]
 Repository = "https://github.com/eyecantell/vibedir"
@@ -68,7 +70,7 @@ build-backend = "pdm.backend"
 [tool.pdm]
 distribution = true
 package-dir = "src"
-includes = ["src/vibedir", "src/vibedir/vibedir.yaml"]
+includes = ["src/vibedir", "src/vibedir/config.yaml"]
 
 [tool.pdm.dev-dependencies]
 test = [

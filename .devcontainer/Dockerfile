@@ -1,4 +1,4 @@
-# Development Dockerfile for simple_keystore with PostgreSQL
+# Development Dockerfile for vibedir
 # For use with VS Code Remote Development
 
 FROM python:3.10-slim AS base
@@ -6,7 +6,7 @@ FROM python:3.10-slim AS base
 # Prevent apt from prompting for input
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Combined apt call to minimize layers and install essential packages
+# Install essential packages
 RUN apt-get update && apt-get install -y \
     curl \
     git \
@@ -25,21 +25,15 @@ USER developer
 
 # Set up Python environment
 ENV PATH=/home/developer/.local/bin:$PATH
-WORKDIR /workspace
+WORKDIR /mounted/dev/vibedir
 
 # Install Python packages
 RUN python -m ensurepip --default-pip && \
-    pip install --no-cache-dir --upgrade pip
+    pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir pdm
 
-# Install development tools
-RUN pip install --no-cache-dir \
-    pdm \
-    build \
-    twine \
-    ruff \
-    GitPython \
-    pytest \ 
-    prepdir \
-    applydir
+# Install dependencies using PDM in editable mode (default)
+#COPY pyproject.toml pdm.lock /mounted/dev/vibedir/
+#RUN cd /mounted/dev/vibedir/ && pdm install -G test -G dev
 
 RUN git config --global --add safe.directory /mounted/dev/vibedir

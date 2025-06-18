@@ -1,37 +1,24 @@
 # VibeDir
 
-VibeDir is a utility to facilitate code modifications by integrating with `prepdir` and `applydir`. It generates prompts for large language models (like Grok 3) to modify a codebase, producing a `modified_prepped_dir.txt` file that can be applied to update your project. VibeDir supports both manual workflows and future API integration with Grok 3.
+VibeDir is a utility to facilitate code modifications when using an AI assistant. By integrating with `prepdir` and `applydir`, it generates prompts for large language models (like Grok 3) to modify a codebase. VibeDir supports manual workflows and in the future will support API integration with the latest GenAI models.
 
-# Functionality is "COMING SOON" #
+# Functionality is not yet ready, but "COMING SOON" #
 
 ## Features
 - Generate prompts for code changes based on `prepped_dir.txt` from `prepdir`.
 - Support manual editing or API-driven workflows.
-- Preserve the structure of `prepped_dir.txt` for compatibility with `applydir`.
 - Configurable via a YAML file for custom prompt templates and logging.
 
 ## Installation
 ```bash
-pip install vibedir
+# Will be pip install vibedir but don't do it yet!
 ```
 
 ## Usage
-1. Generate a `prepped_dir.txt` file using `prepdir` (requires `prepdir` installed):
-   ```bash
-   prepdir --output prepped_dir.txt
-   ```
-2. Use `vibedir` to create a prompt for Grok 3 or another LLM:
-   ```bash
-   vibedir prepped_dir.txt --request "Refactor test_file.py to use async functions" --output modified_prepped_dir.txt --manual
-   ```
-   - This outputs a prompt to copy into Grok 3. Save the response as `modified_prepped_dir.txt`.
-3. Apply changes using `applydir` (requires `applydir` installed):
-   ```bash
-   applydir modified_prepped_dir.txt
-   ```
+1. TBD
 
 ## Configuration
-VibeDir uses a `vibedir.yaml` file for settings. Example:
+VibeDir uses a `config.yaml` file for settings. Example:
 ```yaml
 logging:
   level: INFO
