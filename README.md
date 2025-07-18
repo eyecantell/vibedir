@@ -1,4 +1,4 @@
-# VibeDir
+# VibeDir - Functionality is not yet ready, but "COMING SOON" #
 
 VibeDir is a utility to facilitate code modifications when using an AI assistant. By integrating with `prepdir` and `applydir`, it generates prompts for large language models (like Grok 3) to modify a codebase. VibeDir supports manual workflows and in the future will support API integration with the latest GenAI models.
 
@@ -43,3 +43,9 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ## Contributing
 Issues and PRs are welcome at [https://github.com/eyecantell/vibedir](https://github.com/eyecantell/vibedir).
+
+## Git Integration
+- Managed by `vibedir` to keep `applydir` focused.
+- **Before Validation**: Commit (e.g., `git commit -m "Pre-applydir changes"`) or backup files.
+- **After Application**: Commit approved changes or revert (e.g., `git reset --hard`).
+- **Non-Git Projects**: Use file backups.
