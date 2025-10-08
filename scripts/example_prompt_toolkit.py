@@ -10,7 +10,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 # State tracking for menu options
 states = {
     "option1": True,  # Active/Inactive toggle
-    "suboption1": False
+    "suboption1": False,
+    "suboption2": False
 }
 
 # Custom style for colors
@@ -23,78 +24,154 @@ style = Style.from_dict({
 # Create key bindings
 bindings = KeyBindings()
 
-@bindings.add('x')
 @bindings.add('q')
-def _(event):
-    """Exit the application when 'x' or 'q' is pressed."""
-    event.app.exit(result='exit')  # Set result to signal exit
-    logging.info("Exiting via key binding (x or q).")
+def exit_app(event):
+    """Exit the application when 'q' is pressed."""
+    event.app.exit(result='q')
+    logging.info("Exiting via key binding (q).")
+
+@bindings.add('b')
+def back_to_menu(event):
+    """Go back to parent menu when 'b' is pressed (in submenus)."""
+    event.app.exit(result='b')
+    logging.info("Going back via key binding (b).")
+
+@bindings.add('h')
+def show_help(event):
+    """Show help menu when 'h' is pressed."""
+    event.app.exit(result='h')
+    logging.info("Showing help via key binding (h).")
+
+# Numeric bindings for menu selections
+for i in range(1, 10):  # Bind '1' to '9'
+    @bindings.add(str(i))
+    def _(event, number=str(i)):
+        """Select menu option when numeric key is pressed."""
+        event.app.exit(result=number)
+        logging.info(f"Selected option via key binding ({number}).")
+
+def get_help_text():
+    """Return help text for the current menu."""
+    return HTML(
+        "Help:\n"
+        "<active>[q]</active> - Quit the application\n"
+        "<active>[h]</active> - Show this help\n"
+        "<active>[b]</active> - Go back to parent menu (in submenus)\n"
+        "<active>[1-9]</active> - Select numbered menu option\n"
+        "Press <enter> key to continue..."
+    )
 
 def main_menu():
     session = PromptSession(
         multiline=False,
-        completer=WordCompleter(['1', '2', '3', 'x', 'q']),  # Include x, q in completer
+        completer=WordCompleter(['1', '2', 'q', 'h']),
         style=style,
         key_bindings=bindings
     )
+    prompt = HTML(
+        "Main Menu:\n"
+        f"[1] Submenu 1 <active>[{'Active' if states['option1'] else 'Inactive'}]</active>\n"
+        "[2] Immediate Action\n"
+        "Press [q] to quit, [h] for help\n> "
+    )
     while True:
         try:
-            choice = session.prompt(HTML(
-                "Main Menu:\n"
-                f"1. Option with Submenu <active>[{'Active' if states['option1'] else 'Inactive'}]</active>\n"
-                "2. Immediate Action\n"
-                "3. Exit (or press 'x'/'q')\n> "
-            ))
+            choice = session.prompt(prompt)
             logging.info(f"Main menu choice: {choice}")
             if choice == '1':
-                if submenu():
-                    print("Exiting from submenu...")
-                    return True  # Signal program exit
+                if submenu1():
+                    return True  # Exit program
             elif choice == '2':
                 print("Executing immediate action...")
-                states["option1"] = not states["option1"]  # Toggle state
-            elif choice in ('3', 'x', 'q', 'exit'):  # Handle numeric and key inputs
+                states["option1"] = not states["option1"]
+            elif choice == 'q':
                 print("Exiting...")
-                return True  # Signal program exit
+                return True
+            elif choice == 'h':
+                session.prompt(get_help_text())  # Show help
             else:
                 print("Invalid choice.")
         except KeyboardInterrupt:
             print("Exiting via Ctrl+C...")
-            return True  # Signal program exit
-        except EOFError:  # Handle Ctrl+D
+            return True
+        except EOFError:
             print("Exiting via Ctrl+D...")
-            return True  # Signal program exit
+            return True
 
-def submenu():
+def submenu1():
     session = PromptSession(
         multiline=False,
-        completer=WordCompleter(['1', '2', 'x', 'q']),  # Include x, q in completer
+        completer=WordCompleter(['1', '2', 'b', 'q', 'h']),
         style=style,
         key_bindings=bindings
     )
+    prompt = HTML(
+        "Submenu 1:\n"
+        f"[1] Suboption 1 <inactive>[{'Active' if states['suboption1'] else 'Inactive'}]</inactive>\n"
+        "[2] Submenu 2\n"
+        "Press [b] to go back, [q] to quit, [h] for help\n> "
+    )
     while True:
         try:
-            choice = session.prompt(HTML(
-                "Submenu:\n"
-                f"1. Suboption 1 <inactive>[{'Active' if states['suboption1'] else 'Inactive'}]</inactive>\n"
-                "2. Back (or press 'x'/'q' to exit)\n> "
-            ))
-            logging.info(f"Submenu choice: {choice}")
+            choice = session.prompt(prompt)
+            logging.info(f"Submenu 1 choice: {choice}")
             if choice == '1':
-                print("Toggling suboption state...")
+                print("Toggling suboption 1 state...")
                 states["suboption1"] = not states["suboption1"]
             elif choice == '2':
-                return False  # Normal return to main menu
-            elif choice in ('x', 'q', 'exit'):  # Allow exit from submenu
-                return True  # Signal to exit main menu
+                if submenu2():
+                    return True  # Exit program
+            elif choice == 'b':
+                return False  # Back to main menu
+            elif choice == 'q':
+                print("Exiting...")
+                return True
+            elif choice == 'h':
+                session.prompt(get_help_text())  # Show help
             else:
                 print("Invalid choice.")
         except KeyboardInterrupt:
-            print("Exiting via Ctrl+C from submenu...")
-            return True  # Signal program exit
+            print("Exiting via Ctrl+C...")
+            return True
         except EOFError:
-            print("Exiting via Ctrl+D from submenu...")
-            return True  # Signal program exit
+            print("Exiting via Ctrl+D...")
+            return True
+
+def submenu2():
+    session = PromptSession(
+        multiline=False,
+        completer=WordCompleter(['1', '2', 'b', 'q', 'h']),
+        style=style,
+        key_bindings=bindings
+    )
+    prompt = HTML(
+        "Submenu 2:\n"
+        f"[1] Suboption 2 <inactive>[{'Active' if states['suboption2'] else 'Inactive'}]</inactive>\n"
+        "[2] Back\n"
+        "Press [b] to go back, [q] to quit, [h] for help\n> "
+    )
+    while True:
+        try:
+            choice = session.prompt(prompt)
+            logging.info(f"Submenu 2 choice: {choice}")
+            if choice == '1':
+                print("Toggling suboption 2 state...")
+                states["suboption2"] = not states["suboption2"]
+            elif choice in ('2', 'b'):
+                return False  # Back to submenu 1
+            elif choice == 'q':
+                print("Exiting...")
+                return True
+            elif choice == 'h':
+                session.prompt(get_help_text())  # Show help
+            else:
+                print("Invalid choice.")
+        except KeyboardInterrupt:
+            print("Exiting via Ctrl+C...")
+            return True
+        except EOFError:
+            print("Exiting via Ctrl+D...")
+            return True
 
 if __name__ == "__main__":
     main_menu()
