@@ -39,13 +39,13 @@ keywords = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "typing-extensions>=4.7.1; python_version < '3.11'",
-    "importlib-resources>=5.0; python_version < '3.9'",
+    "typing-extensions>=4.7.1",
     "pyyaml>=6.0",
-    "prepdir>=0.9.0",
-    "applydir>=0.1.0",
+    "prepdir>=0.18.0",
+    "applydir>=0.3.0",
     "openai>=1.84.0",
     "dynaconf>=3.2.6",
+    "openai>=2.1.0",
 ]
 
 [project.optional-dependencies]

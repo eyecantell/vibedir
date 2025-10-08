@@ -32,8 +32,13 @@ RUN python -m ensurepip --default-pip && \
     pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir pdm
 
-# Install dependencies using PDM in editable mode (default)
-#COPY pyproject.toml pdm.lock /mounted/dev/vibedir/
-#RUN cd /mounted/dev/vibedir/ && pdm install -G test -G dev
+RUN pip install --no-cache-dir \
+    build \
+    GitPython \
+    pdm \
+    pydantic \
+    pytest \
+    ruff \
+    twine
 
 RUN git config --global --add safe.directory /mounted/dev/vibedir

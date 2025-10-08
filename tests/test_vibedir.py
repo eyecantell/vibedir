@@ -182,13 +182,27 @@ def test_validate_llm_response_invalid():
 
 def test_call_llm_api(sample_config_content):
     """Test calling LLM API with a mocked OpenAI client."""
-    mock_response = type("MockResponse", (), {
-        "choices": [type("MockChoice", (), {
-            "message": type("MockMessage", (), {
-                "content": "=-= Begin File: 'test.py' =-=\nprint('Mock content')\n=-= End File: 'test.py' =-="
-            })
-        })]
-    })()
+    mock_response = type(
+        "MockResponse",
+        (),
+        {
+            "choices": [
+                type(
+                    "MockChoice",
+                    (),
+                    {
+                        "message": type(
+                            "MockMessage",
+                            (),
+                            {
+                                "content": "=-= Begin File: 'test.py' =-=\nprint('Mock content')\n=-= End File: 'test.py' =-="
+                            },
+                        )
+                    },
+                )
+            ]
+        },
+    )()
     with patch("vibedir.vibedir.OpenAI") as mock_openai:
         mock_openai.return_value.chat.completions.create.return_value = mock_response
         content = call_llm_api("Test prompt", sample_config_content)
