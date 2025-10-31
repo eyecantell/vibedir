@@ -1,0 +1,44 @@
+APPLY_CHANGES:
+  AUTO_APPLY: false  # Set to true to apply changes without user confirmation
+LOGGING:
+  LEVEL: "INFO"
+prompt_template: |
+  You are an expert code editor. For the provided files, apply the requested changes and return a JSON array with the following structure:
+  [
+    {
+      "file": "<relative_file_path>",
+      "changes": [
+        {
+          "original_lines": [<at least 10 lines to replace for existing files, or all lines for files shorter than 10, or empty for new files>],
+          "changed_lines": [<new lines, includes original_lines plus new lines for additions, subset for deletions, or full content for new files>]
+        }
+      ]
+    }
+  ]
+  - All changes (modifications, additions, deletions, creations) will be treated as replacements (changed_lines for original_lines).
+  - For existing files, include at least 10 lines in original_lines (or all lines for files shorter than 10) to ensure a unique match.
+  - For additions, include 10 lines for context around the insertion point in original_lines, duplicate the context lines in changed_lines, and include new lines.
+  - For deletions, include the lines to delete in original_lines (with surrounding lines as needed to reach 10 lines) and exclude the lines to be deleted from changed_lines.
+  - For new files, use empty original_lines ([]) and include the full content in changed_lines.
+  - Merge changes within 10 lines of each other into a single change for existing files.
+  - Ensure changed_lines are syntactically correct for the language (e.g., Python for .py files, Markdown for .md files).
+  - Use relative file paths (e.g., src/main.py) matching the provided file listing.
+
+  Files:
+  <insert full file content from prepdir>
+
+  Changes: <user-supplied prompt, e.g., "Add a save button to the top menu">
+  
+llm:
+  provider: grok
+  endpoint: https://api.x.ai/v1
+  api_key: your_grok_api_key
+  model: grok-3
+
+linting:
+  python:
+    extensions: [".py"]
+    command: "pylint --disable=all --enable=undefined-variable,syntax-error {file}"
+  markdown:
+    extensions: [".md", ".markdown"]
+    command: "markdownlint {file}"
