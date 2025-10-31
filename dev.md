@@ -5,11 +5,11 @@
 - **Dev:** Windows/mac → **VSCode + Docker containers**
 - **SCM/CI:** **GitHub + GitHub Actions** (test → PyPI publish)
 - **AI Stack:** Ingest (API/Tika OCR) → Summarize (Grok/Claude/OpenAI) → Embed (SentenceTransformers) → Store (pgvector) → Serve (FastAPI) → Scale (Kafka/K8s/HPA) → UI (Flutter/Cloudflare)
-- **Key Project:** **prepdir** (PyPI, 8k+ dl) – AI code prep: smart filtering, UUID scrubbing, YAML config, validation, structured output
+- **Key Project:** **prepdir** (PyPI, 10k+ dl) – AI code prep: smart filtering, UUID scrubbing, YAML config, validation, structured output
 
 ## Strengths
 - **Python:** FastAPI, Pydantic, Dynaconf, pytest, pdm
-- **DevOps:** Docker, Skaffold/Helm, Railway, Prometheus/Grafana/Kafdrop
+- **DevOps:** Docker, Skaffold/Helm, Prometheus/Grafana/Kafdrop
 - **Reliability:** 100k+ unit C2 systems → informs scale/reproducibility, not direction
 
 ## Style
@@ -17,14 +17,13 @@
 
 ## LLM Guidance
 - **Never guess code** – wait for actual files/functions  
-- **Design first** – for any non-trivial change (more than a simple bug fix), propose **architecture, components, data flow, interfaces** before coding  
+- **Design first** – for any non-trivial change (more than a simple bug fix), propose **architecture, components, data flow, interfaces** as applicable before coding  
 - **Best tool for the job** – prefer proven open-source, but suggest better alternatives freely  
 - **I love learning** – introduce new libraries/approaches when they clearly improve the solution  
 - Assume GitHub + Actions workflow
 - Suggest `devcontainer.json`, `pyproject.toml`, `docker-compose.yml`
-- Use **prepdir-style filtering** for code context
 - Keep responses concise; ask early clarifying questions
-- Use modern AI/dev patterns – Paul adapts instantly
+- Use modern AI/dev patterns – I adapt quickly
 
 ---
 
@@ -55,7 +54,7 @@
 - Reusability (CLI + lib dual interface)  
 - Testability (pytest + containerized integration)  
 - Privacy & Safety (UUID scrub, no PII in logs/examples)  
-- **Open-Source First, But Flexible** – leverage community tools; replace with better fits anytime
+- **Open-Source First, But Flexible** – leverage community tools; replace with better fits when warranted
 
 ### Anti-Patterns
 - God objects  
