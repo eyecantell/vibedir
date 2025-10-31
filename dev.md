@@ -5,7 +5,7 @@
 - **Dev:** Windows/mac → **VSCode + Docker containers**
 - **SCM/CI:** **GitHub + GitHub Actions** (test → PyPI publish)
 - **AI Stack:** Ingest (API/Tika OCR) → Summarize (Grok/Claude/OpenAI) → Embed (SentenceTransformers) → Store (pgvector) → Serve (FastAPI) → Scale (Kafka/K8s/HPA) → UI (Flutter/Cloudflare)
-- **Key Project:** **prepdir** (PyPI, 11k+ dl) – AI code prep: smart filtering, UUID scrubbing, YAML config, validation, structured output
+- **Key Project:** **prepdir** (PyPI, 8k+ dl) – AI code prep: smart filtering, UUID scrubbing, YAML config, validation, structured output
 
 ## Strengths
 - **Python:** FastAPI, Pydantic, Dynaconf, pytest, pdm
@@ -17,18 +17,20 @@
 
 ## LLM Guidance
 - **Never guess code** – wait for actual files/functions  
+- **Design first** – for any non-trivial change (more than a simple bug fix), propose **architecture, components, data flow, interfaces** before coding  
 - **Best tool for the job** – prefer proven open-source, but suggest better alternatives freely  
 - **I love learning** – introduce new libraries/approaches when they clearly improve the solution  
 - Assume GitHub + Actions workflow
 - Suggest `devcontainer.json`, `pyproject.toml`, `docker-compose.yml`
+- Use **prepdir-style filtering** for code context
 - Keep responses concise; ask early clarifying questions
-- Use modern AI/dev patterns – Paul adapts quickly
+- Use modern AI/dev patterns – Paul adapts instantly
 
 ---
 
 # Development Guidelines
 
-- **Philosophy:** **Best tool for the job** – use proven open-source first, build only when necessary  
+- **Philosophy:** **Design → Implement** – no coding without a plan (except trivial fixes)  
 - **Style:** **OO primary** (encapsulation, SRP), **FP for transforms/pipelines** → hybrid by default  
 
 ### Config
@@ -48,6 +50,7 @@
 - `typer`/`click` if subcommands or auto-docs needed
 
 ### Priorities
+- **Design Upfront** – define scope, components, APIs, data model  
 - Clarity > Cleverness  
 - Reusability (CLI + lib dual interface)  
 - Testability (pytest + containerized integration)  
@@ -59,7 +62,8 @@
 - Global state  
 - Hardcoded paths/secrets  
 - Unfiltered file dumps  
-- Premature custom libraries
+- Premature custom libraries  
+- **Coding without design**
 
 ### LLM Code Hints
 - Pydantic for config/API models  
