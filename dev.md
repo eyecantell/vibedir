@@ -17,18 +17,18 @@
 
 ## LLM Guidance
 - **Never guess code** – wait for actual files/functions  
-- **Prefer proven open-source libraries** – only build if no good fit exists  
+- **Best tool for the job** – prefer proven open-source, but suggest better alternatives freely  
+- **I love learning** – introduce new libraries/approaches when they clearly improve the solution  
 - Assume GitHub + Actions workflow
 - Suggest `devcontainer.json`, `pyproject.toml`, `docker-compose.yml`
-- Use **prepdir-style filtering** for code context
 - Keep responses concise; ask early clarifying questions
-- Use modern AI/dev patterns – Paul adapts instantly
+- Use modern AI/dev patterns – Paul adapts quickly
 
 ---
 
 # Development Guidelines
 
-- **Philosophy:** **Use proven, open-source solutions first** – no wheel reinvention  
+- **Philosophy:** **Best tool for the job** – use proven open-source first, build only when necessary  
 - **Style:** **OO primary** (encapsulation, SRP), **FP for transforms/pipelines** → hybrid by default  
 
 ### Config
@@ -52,18 +52,18 @@
 - Reusability (CLI + lib dual interface)  
 - Testability (pytest + containerized integration)  
 - Privacy & Safety (UUID scrub, no PII in logs/examples)  
-- **Open-Source First:** Leverage community solutions (e.g., `pydantic`, `sqlmodel`, `httorney`) before custom code
+- **Open-Source First, But Flexible** – leverage community tools; replace with better fits anytime
 
 ### Anti-Patterns
 - God objects  
 - Global state  
 - Hardcoded paths/secrets  
 - Unfiltered file dumps  
-- Duplicating existing libraries
+- Premature custom libraries
 
 ### LLM Code Hints
 - Pydantic for config/API models  
-- `dataclasses` or `_namedtuple` for immutable data  
+- `dataclasses` or `NamedTuple` for immutable data  
 - Pipeline: `extract → summarize → embed → store`  
 - OO services: `Processor`, `Matcher`, `Ingestor`  
 - Always include: **type hints**, **docstrings**, **CLI entrypoint**
