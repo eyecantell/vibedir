@@ -8,7 +8,24 @@ VibeDir is a utility to facilitate code modifications when using an AI assistant
   - **Clipboard**: Human-in-loop cut/paste to LLM UI (e.g. Grok, Claude, ChatGPT, other)
   - **API**: Uses `apibump` (LiteLLM wrapper) for scripted calls and usage charges.
 
-<span style="color: red;">This text is red.</span>
+## UI (in design)
+
+### CLI UI Header
+Current Prompt ('c' to copy): 
+Task: [blank|preview of current task wording...] ('t' to set)
+Auxillary: [n files] [dev.md] [test results] [lint results] [other results]
+Test Results: [ready]    Lint Results: [ready]   Other Results: [ready]
+Last commit: (last commit message)
+
+### CLI UI Menu
+1. Set Task ('t')
+2. Add Test Results # only if test results are available and not already in prompt
+3. Add Linting Results # only if linting results are available and not already in prompt
+4. Add Other Results # only if other results are available and not already in prompt
+5. Run shell command ('S') and include output in prompt ('s')
+6. ...
+
+
 ---
 
 ## vibedir.txt
@@ -31,6 +48,10 @@ The format will be similar to the following:
     [TEST_RESULTS]
     {test command and results if tests have been run}
     [/TEST_RESULTS]
+
+    [LINT_RESULTS]
+    {test command and results if tests have been run}
+    [/LINT_RESULTS]
 
     [OTHER_RESULTS]
     {auto-command and results if configured to be shared}
@@ -87,29 +108,45 @@ If the user is in clipboard mode, then the vibedir.txt will be split into (~40k 
 ### Config
     
     # The LLM is asked to provide a commit message for each set of changes. The following configures how that will be used.
-    AUTO_COMMIT: true/false
-    COMMIT_COMMAND: (e.g. git commit -a -m {message} )
+
+    # If auto commit is set to:
+    # previous: a commit will be automatically performed for the previous code changes before new code changes are made
+    # latest: a commit will be automatically performed after each successful set of code changes from the LLM (via applydir)
+    # off: do not perform commits
+    AUTO_COMMIT: [previous|latest|off]
+    COMMIT_COMMAND: git commit -a -m {{ message }} 
 
     # Testing can be done automatically after each set of changes is successfully applied to the code base
-    AUTO_TEST: true/false
-    TEST_COMMAND: (e.g. pytest tests)
+    AUTO_TEST: [false|true]
+    TEST_COMMAND: pytest tests
 
-    AUTO_COMMAND: {optional command to be run after a code change is successfully applied}
-    SHARE_AUTO_COMMAND_RESULTS: true/false
+    # Linting can be done automatically after each set of changes is successfully applied to the code base
+    LINT_COMMAND: ruff {{ base_directory }}
 
+    # An additional command can be automatically run after changes are successfully applied to the code base
+    AUTO_COMMAND: ruff format {{ base_directory }}
+    SHARE_AUTO_COMMAND_RESULTS: [false|true]
+
+    # Choose a standard level for logging (CRITICAL, ERROR, WARNING, INFO, or DEBUG)
     LOGGING:
       LEVEL: "INFO"
 
-    MODE: {CLIPBOARD or API, if API then LLM tag must be defined}
-    CLIPBOARD_MAX_CHARS_PER_FILE: 40000 # set the max number of characters per file (to work around LLM UI file truncation)
+    # The mode determines how vibedir is used:
+    # CLIPBOARD: prompts are shared with an LLM via copy/paste
+    # API: interactions with an LLM are handled via API. Note LLM tag must be defined to use API mode.
+    MODE: [CLIPBOARD|API] if API then LLM tag must be defined 
+    # If using CLIPBOARD mode, set the max number of characters per file (to work around LLM UI file truncation)
+    CLIPBOARD_MAX_CHARS_PER_FILE: 40000
+
+    # If using API mode, the LLM information must be defined (this will be fleshed out as apibump is developed)
     LLM:
       model: grok-4
       endpoint: https://api.x.ai/v1
       api_key: <todo: figure out how to store/retrieve this, maybe .netrc? What does LiteLLM do?>
 
 ### Token Counting
-In clibboard mode, request tokens are counted for each generated prompt, and once 70% of the LLM context window has been reached, an automatic refresh will be triggered (where dev.md, code, and guidelines are reshared).
-- In API mode, response tokens can be counted as well. 
+- In CLIPBOARD mode, request tokens are counted for each generated prompt, and once 70% of the LLM context window has been reached, an automatic refresh will be triggered (where dev.md, code, and guidelines are reshared). We can also count tokens received in teh applydir.json file, but we have no way to count additional prompt information added by the user in the LLM UI, or additional response information outside of the applydir.json file.  
+- In API mode, all prompt/response tokens can be counted. 
 
 ## Todo
 - Build CLI menu selections and status items (test config, latest number of changes, latest commit message, latest token count)

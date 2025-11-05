@@ -13,10 +13,10 @@
 - **Reliability:** 100k+ unit C2 systems → informs scale/reproducibility, not direction
 
 ## Style
-- Terse, iterative, fast-learning, clarity-first
+- Pithy, iterative, fast-learning, clarity-first
 
 ## LLM Guidance
-- **Never guess code** – wait for actual files/functions  
+- **Never guess code** – wait for actual files/functions
 - **Design first** – for any non-trivial change (more than a simple bug fix), propose **architecture, components, data flow, interfaces** as applicable before coding  
 - **Best tool for the job** – prefer proven open-source, but suggest better alternatives freely  
 - **I love learning** – introduce new libraries/approaches when they clearly improve the solution  

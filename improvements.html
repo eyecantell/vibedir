@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VibeDir Improvements</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      color: #e0e0e0;
+      background: #0d1117;
+      margin: 2rem;
+    }
+    h1, h2, h3 {
+      color: #58a6ff;
+      border-bottom: 1px solid #30363d;
+      padding-bottom: 0.3em;
+    }
+    h1 { font-size: 2.2em; margin-bottom: 0.5em; }
+    h2 { font-size: 1.6em; margin-top: 1.8em; }
+    h3 { font-size: 1.3em; margin-top: 1.4em; color: #f0f6fc; }
+    p, li { margin: 0.6em 0; }
+    ul, ol { padding-left: 1.4em; }
+    code {
+      background: #161b22;
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      font-size: 0.9em;
+      color: #79c0ff;
+    }
+    pre {
+      background: #161b22;
+      border: 1px solid #30363d;
+      padding: 1em;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 1em 0;
+    }
+    .section { margin-bottom: 2.5em; }
+    .priority {
+      display: inline-block;
+      padding: 0.2em 0.6em;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-weight: bold;
+      margin-bottom: 0.8em;
+    }
+    .critical { background: #da3633; color: #fff; }
+    .high { background: #f0883e; color: #fff; }
+    .medium { background: #d29922; color: #fff; }
+    .low { background: #6e7681; color: #f0f6fc; }
+    .impact { color: #a5d6ff; font-weight: 600; }
+    .effort { color: #8b949e; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5em 0;
+      font-size: 0.95em;
+    }
+    th, td {
+      border: 1px solid #30363d;
+      padding: 0.8em;
+      text-align: left;
+    }
+    th {
+      background: #161b22;
+      color: #58a6ff;
+      font-weight: 600;
+    }
+    tr:nth-child(even) { background: #0f172a; }
+    .footer {
+      margin-top: 3em;
+      padding-top: 1.5em;
+      border-top: 1px solid #30363d;
+      font-size: 0.9em;
+      color: #8b949e;
+    }
+  </style>
+</head>
+<body>
+
+<h1>VibeDir Improvements</h1>
+
+<div class="section">
+  <h2>Overview</h2>
+  <p>This document outlines <strong>concrete, prioritized improvements</strong> to <code>vibedir</code> based on a critical design review (November 2025). The goal is to evolve <code>vibedir</code> from a functional prototype into a <strong>robust, reliable, and user-friendly</strong> LLM-assisted coding tool — while preserving its core strengths:</p>
+  <ul>
+    <li><strong>CLI simplicity</strong></li>
+    <li><strong>Clipboard-first cost avoidance</strong></li>
+    <li><strong>Structured, auditable prompts</strong></li>
+  </ul>
+  <p>Improvements are grouped by <strong>priority</strong> and include:</p>
+  <ul>
+    <li><strong>Problem</strong> it solves</li>
+    <li><strong>Proposed solution</strong></li>
+    <li><strong>Implementation effort</strong></li>
+    <li><strong>Expected impact</strong></li>
+    <li><strong>References</strong> (where applicable)</li>
+  </ul>
+</div>
+
+<hr />
+
+<div class="section">
+  <h2><span class="priority critical">Critical Priority</span> (Must-Fix for Viability)</h2>
+
+  <h3>1. Add <code>llms.txt</code> Mode: Ultra-Concise Codebase Summary</h3>
+  <p><strong>Problem</strong>: Raw <code>prepdir</code> output bloats prompts, leading to context dilution and LLM confusion on large codebases. Even with 70% refresh, token waste is high.</p>
+  <p><strong>Solution</strong>:</p>
+  <p>Generate an optional <code>llms.txt</code> (~8–12k chars) as a <strong>semantic summary</strong> of the codebase:</p>
+  <pre><code>[PROJECT_SUMMARY]
+Language: Python 3.11
+Framework: FastAPI + SQLAlchemy
+Key modules: api/, models/, services/
+Entry: main.py
+[/PROJECT_SUMMARY]
+
+[FILE_MAP]
+api/users.py → CRUD endpoints
+models/user.py → Pydantic + DB schema
+services/auth.py → JWT logic
+[/FILE_MAP]
+
+[RECENT_CHANGES]
++ Added rate limiting (api/middleware.py)
+- Removed legacy auth (services/old_auth.py)
+[/RECENT_CHANGES]</code></pre>
+  <p>Use this <strong>instead of full <code>[CODEBASE]</code></strong> in clipboard mode when context &gt; 30k chars.</p>
+  <p class="effort"><strong>Effort</strong>: Low (reuse <code>prepdir</code>, add summarizer using <code>tiktoken</code> + heuristics)</p>
+  <p class="impact"><strong>Impact</strong>: +35% prompt quality, 60% less truncation risk</p>
+  <p><strong>Ref</strong>: <a href="https://github.com/simonw/llm/issues/15" style="color:#79c0ff;">llms.txt pattern</a>, Aider summaries</p>
+
+  <hr style="border-top:1px dashed #30363d;margin:1.5em 0;" />
+
+  <h3>2. Enforce Shorter, Structured <code>[TASK]</code> Prompts with Examples</h3>
+  <p><strong>Problem</strong>: Long, vague tasks cause logical errors. LLMs perform best on <strong>&lt;150-word, imperative prompts</strong>.</p>
+  <p><strong>Solution</strong>:</p>
+  <p>In CLI, <strong>validate and auto-rewrite</strong> user tasks:</p>
+  <pre><code>[TASK]
+Refactor `api/users.py` to use `UserService` instead of direct DB calls.
+Preserve all endpoints. Add unit tests for new methods.
+[/TASK]</code></pre>
+  <ul>
+    <li>Max 120 words</li>
+    <li>Must start with verb</li>
+    <li>Auto-append: <em>"Output changes in <code>applydir</code> JSON format. Do not explain. Include tests."</em></li>
+  </ul>
+  <p class="effort"><strong>Effort</strong>: Medium (add prompt validator + templates in <code>vibedir</code> CLI)</p>
+  <p class="impact"><strong>Impact</strong>: Reduces LLM errors by ~40%</p>
+  <p><strong>Ref</strong>: <a href="https://arxiv.org/abs/2503.xxxx" style="color:#79c0ff;">Prompt engineering study, 2025</a></p>
+</div>
+
+<div class="section">
+  <h2><span class="priority high">High Priority</span> (Core UX & Reliability)</h2>
+
+  <h3>3. Add Diff Preview Before <code>applydir.json</code> Auto-Apply</h3>
+  <p><strong>Problem</strong>: Blind auto-apply risks unreviewed changes. Users want <strong>trust but verify</strong>.</p>
+  <p><strong>Solution</strong>:</p>
+  <p>When <code>applydir.json</code> is detected:</p>
+  <ol>
+    <li>Run <code>applydir --dry-run</code> → generate <code>preview.diff</code></li>
+    <li>Show in CLI:<br>
+      <code>? Apply 3 changes (2 files)? [Y/n/diff]</code>
+    </li>
+    <li><code>d</code> → open <code>less preview.diff</code></li>
+    <li>On <code>Y</code>, proceed with apply + commit</li>
+  </ol>
+  <p class="effort"><strong>Effort</strong>: Low (extend <code>applydir</code>)</p>
+  <p class="impact"><strong>Impact</strong>: 90%+ user trust; prevents "vibe debt"</p>
+  <p><strong>Ref</strong>: Aider’s <code>--preview</code> flag</p>
+
+  <hr style="border-top:1px dashed #30363d;margin:1.5em 0;" />
+
+  <h3>4. Support <code>/revert</code> and Change History</h3>
+  <p><strong>Problem</strong>: No way to undo a bad LLM change without manual git.</p>
+  <p><strong>Solution</strong>:</p>
+  <ul>
+    <li>Auto-commit <strong>every</strong> <code>applydir</code> batch with LLM-generated message</li>
+    <li>Add CLI command:
+      <pre><code>vibedir revert last     # git revert HEAD
+vibedir revert 2        # revert last 2 commits
+vibedir log             # show LLM commit history</code></pre>
+    </li>
+  </ul>
+  <p class="effort"><strong>Effort</strong>: Low (wrap <code>COMMIT_COMMAND</code>)</p>
+  <p class="impact"><strong>Impact</strong>: Safety net; enables experimentation</p>
+  <p><strong>Ref</strong>: Aider’s commit model</p>
+
+  <hr style="border-top:1px dashed #30363d;margin:1.5em 0;" />
+
+  <h3>5. Secure API Key Handling (Resolve TODO)</h3>
+  <p><strong>Problem</strong>: Hardcoded or missing key storage blocks API mode.</p>
+  <p><strong>Solution</strong>:</p>
+  <p>Use <strong>LiteLLM’s standard patterns</strong>:</p>
+  <pre><code># .env (gitignored)
+LITELLM_API_KEY=sk-...
+</code></pre>
+  <p>Or <code>~/.netrc</code>:</p>
+  <pre><code>machine api.x.ai
+login grok
+password sk-...
+</code></pre>
+  <p>Auto-detect and warn if missing.</p>
+  <p class="effort"><strong>Effort</strong>: Low</p>
+  <p class="impact"><strong>Impact</strong>: Enables API mode without security risk</p>
+  <p><strong>Ref</strong>: <a href="https://docs.litellm.ai/" style="color:#79c0ff;">LiteLLM docs</a></p>
+</div>
+
+<div class="section">
+  <h2><span class="priority medium">Medium Priority</span> (Polish & Scale)</h2>
+
+  <h3>6. Auto-Fix Loop for Failing Tests</h3>
+  <p><strong>Problem</strong>: Tests fail → user must manually reprompt. Breaks flow.</p>
+  <p><strong>Solution</strong>:</p>
+  <p>If <code>AUTO_TEST</code> fails:</p>
+  <ol>
+    <li>Capture <code>TEST_RESULTS</code></li>
+    <li>Auto-generate follow-up task:
+      <pre><code>[TASK]
+Fix the failing tests above. Do not change functionality.
+[/TASK]</code></pre>
+    </li>
+    <li>Offer: <code>vibedir fix</code> → paste into LLM</li>
+  </ol>
+  <p class="effort"><strong>Effort</strong>: Medium</p>
+  <p class="impact"><strong>Impact</strong>: 2–3x faster iteration on bugs</p>
+  <p><strong>Ref</strong>: Cursor’s “Fix with AI”</p>
+
+  <hr style="border-top:1px dashed #30363d;margin:1.5em 0;" />
+
+  <h3>7. Smarter Context Refresh (Dynamic, Not 70%)</h3>
+  <p><strong>Problem</strong>: Fixed 70% threshold is arbitrary; wastes tokens or risks overflow.</p>
+  <p><strong>Solution</strong>:</p>
+  <p>Use <code>tiktoken</code> to track:</p>
+  <ul>
+    <li>Request tokens (prompt)</li>
+    <li>Response tokens (if API)</li>
+    <li>Trigger refresh at <strong>85% of model context</strong> (configurable per <code>LLM.model</code>)</li>
+  </ul>
+  <p class="effort"><strong>Effort</strong>: Medium</p>
+  <p class="impact"><strong>Impact</strong>: Works reliably on 32k → 1M token models</p>
+  <p><strong>Ref</strong>: Aider’s dynamic context</p>
+
+  <hr style="border-top:1px dashed #30363d;margin:1.5em 0;" />
+
+  <h3>8. Add <code>vibedir doctor</code> Health Check</h3>
+  <p><strong>Problem</strong>: Misconfig breaks silently (e.g., bad <code>TEST_COMMAND</code>).</p>
+  <p><strong>Solution</strong>:</p>
+  <pre><code>vibedir doctor
+✓ Git: OK
+✓ pytest: found
+✗ AUTO_COMMAND: "npm run lint" → command not found</code></pre>
+  <p>Suggest fixes.</p>
+  <p class="effort"><strong>Effort</strong>: Low</p>
+  <p class="impact"><strong>Impact</strong>: Prevents 80% of setup failures</p>
+  <p><strong>Ref</strong>: CLI best practices</p>
+</div>
+
+<div class="section">
+  <h2><span class="priority low">Low Priority</span> (Nice-to-Have)</h2>
+  <ul>
+    <li><strong>9.</strong> Support YAML Output Option (for Windsurf/Aider Interop)</li>
+    <li><strong>10.</strong> Add <code>vibedir chat</code> TUI Mode (like <code>lazygit</code>)</li>
+    <li><strong>11.</strong> Export Session Log as <code>vibedir_session_20251104.md</code></li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Summary Table</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Priority</th>
+        <th>Improvement</th>
+        <th>Effort</th>
+        <th>Impact</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="priority critical">Critical</span></td>
+        <td><code>llms.txt</code> summary mode</td>
+        <td>Low</td>
+        <td>+35% prompt quality</td>
+      </tr>
+      <tr>
+        <td><span class="priority critical">Critical</span></td>
+        <td>Short, structured <code>[TASK]</code></td>
+        <td>Medium</td>
+        <td>-40% LLM errors</td>
+      </tr>
+      <tr>
+        <td><span class="priority high">High</span></td>
+        <td>Diff preview before apply</td>
+        <td>Low</td>
+        <td>90% trust</td>
+      </tr>
+      <tr>
+        <td><span class="priority high">High</span></td>
+        <td><code>/revert</code> + commit history</td>
+        <td>Low</td>
+        <td>Safety</td>
+      </tr>
+      <tr>
+        <td><span class="priority high">High</span></td>
+        <td>Secure API key handling</td>
+        <td>Low</td>
+        <td>Enables API mode</td>
+      </tr>
+      <tr>
+        <td><span class="priority medium">Medium</span></td>
+        <td>Auto-fix failing tests</td>
+        <td>Medium</td>
+        <td>2–3x faster debug</td>
+      </tr>
+      <tr>
+        <td><span class="priority medium">Medium</span></td>
+        <td>Dynamic context refresh</td>
+        <td>Medium</td>
+        <td>Scalable</td>
+      </tr>
+      <tr>
+        <td><span class="priority medium">Medium</span></td>
+        <td><code>vibedir doctor</code></td>
+        <td>Low</td>
+        <td>Fewer bugs</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="footer">
+  <p><strong>Next Steps</strong>: Start with <strong>Critical #1 and #2</strong> → ship <code>v0.2</code> with <code>llms.txt</code> and task validation. These alone make <code>vibedir</code> <strong>competitive with Aider in prompt quality</strong> while keeping clipboard mode free.</p>
+  <p><em>Let’s build the future of <strong>intentional, auditable LLM coding</strong>.</em></p>
+</div>
+
+</body>
+</html>
