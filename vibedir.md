@@ -1,6 +1,6 @@
 # VibeDir - Functionality is not yet ready, but "COMING SOON" #
 
-VibeDir is a utility to facilitate code modifications when using an AI assistant. It generates prompts for large language models to modify a codebase. VibeDir supports manual workflows (clipboard mode) and in the future will support API integration with the latest GenAI models.
+VibeDir is a utility to facilitate code modifications when using an AI assistant. It generates prompts for large language models to modify a codebase. VibeDir supports manual workflows (clipboard mode) and will soon support API integration with the latest GenAI models.
 
 ## Overview  
 `vibedir` enables **clipboard-driven UI** and **API-powered automation** for LLM development.
@@ -8,25 +8,112 @@ VibeDir is a utility to facilitate code modifications when using an AI assistant
   - **Clipboard**: Human-in-loop cut/paste to LLM UI (e.g. Grok, Claude, ChatGPT, other)
   - **API**: Uses `apibump` (LiteLLM wrapper) for scripted calls and usage charges.
 
-## UI (in design)
+## CLI UI (in design phase)
 
-### CLI UI Header
-Current Prompt ('c' to copy): 
-Task: [blank|preview of current task wording...] ('t' to set)
-Auxillary: [n files] [dev.md] [test results] [lint results] [other results]
-Test Results: [ready]    Lint Results: [ready]   Other Results: [ready]
-Last commit: (last commit message)
+### CLI UI Main Menu Header
+- Current Prompt ('c' to [commit current changes and] copy prompt to clipboard)
+  - Task: [blank|preview of current task wording...] ('t' to set)
+  - Auxillary: [n files] [dev.md] [tests] [linting] [CMD]
+  - Manual changes: file1, file2, ... # if manual changes detected
+- Tests: [✅ success|⏳running|❌ failed|� not run] - Lint: [✅ success|⏳running|❌ failed|� not run]  - CMD: [✅ success|⏳running|❌ failed|� not run] 
+- Menues: Test ('T'), Lint ('L'), CMD ('C'), Source Control ('S')
+- Last commit: (Last commit message)
+- Working commit: (Working commit message) # if current changes
 
-### CLI UI Menu
-1. Set Task ('t')
-2. Add Test Results # only if test results are available and not already in prompt
-3. Add Linting Results # only if linting results are available and not already in prompt
-4. Add Other Results # only if other results are available and not already in prompt
-5. Run shell command ('S') and include output in prompt ('s')
-6. ...
+The [commit current changes and] portion of the Current Prompt message will be displayed if changes have been made (as detected by CHANGES_EXIST_RESULT)
+Test/Lint/CMD results will only be displayed if TEST_COMMAND, LINT_COMMAND, CMD_COMMAND are set (respectively) 
 
+### CLI UI Main Menu
+1. [Set|Edit] Task ('t')  # Will be 'Set' if task is currently empty
+2. Add files to prompt
+3. Run tests # if TEST_COMMAND available
+3. Add Test Results # only if test results are available and not already in prompt
+4. Run lint # if LINT_COMMAND available
+4. Add Linting Results # only if linting results are available and not already in prompt
+5. Run CMD # if CMD_COMMAND available
+5. Add CMD Results # only if AUTO_COMMAND results are available and not already in prompt
+6. Run command ('R') and include output in prompt ('r')
+7. Revert most recent changes [requires REVERT_CHANGES_COMMAND, CHANGES_EXIST_COMMAND, CHANGES_EXIST_RESULT] # only if changes have been made since last commit (CHANGES_EXIST_RESULT)
 
+### CLI UI Test/Lint/CMD Menu Header
+Test results in prompt: [Yes|No]
+Result: [✅ success|⏳running|❌ failed|� not run]
+Result File: /my/temp/test/results/file/full/path.txt # blank if not available - clickable for vscode edit
+Test Command: {TEST_COMMAND}
+Test Result: {TEST_SUCCESS}
+Auto Test: {AUTO_TEST} - Share Test Results: {SHARE_TEST_RESULTS}
+
+The above menu will act as the template for Tests, Lint, and CMD menues
+
+### CLI UI Test/Lint/CMD Menu
+1. Run tests
+2. [Add test results to prompt|Remove test results from prompt] # depending on current prompt state
+3. Set test command and result
+4. Turn [ON|OFF] auto test # depending on current AUTO_TEST value
+
+### CLI UI Source Control Menu Header
+- TBD
+### CLI UI Source Control Menu 
+- TBD
 ---
+
+### Config
+    
+    # The mode determines how vibedir is used:
+    # CLIPBOARD: prompts are shared with an LLM via copy/paste
+    # API: interactions with an LLM are handled via API. Note LLM tag must be defined to use API mode.
+    MODE: [CLIPBOARD|API] if API then LLM tag must be defined 
+    # If using CLIPBOARD mode, set the max number of characters per file (to work around LLM UI file truncation)
+    CLIPBOARD_MAX_CHARS_PER_FILE: 40000
+
+    # If using API mode, the LLM information must be defined (this will be fleshed out as apibump is developed)
+    LLM:
+      model: grok-4
+      endpoint: https://api.x.ai/v1
+      api_key: <todo: figure out how to store/retrieve this, maybe .netrc? What does LiteLLM do?>
+      
+    # Configuration for vibedir uses defaults or config.yaml.  If config changes are made in a session, those are automatically reloaded on the next session. To prevent this load, remove or rename .vibedir/conifg.json
+
+    # The LLM can be asked to provide a commit message for each set of changes. The following configures how that will be used. If ASK_LLM_FOR_COMMIT_MESSAGE is set to false, then we will not ask for commit messages from the LLM (token savings) but the user will need to generate an appropriate commit message for each set of changes.
+    ASK_LLM_FOR_COMMIT_MESSAGE: true # [true|false]
+
+    # If auto commit is set to:
+    #   previous: a commit will be automatically performed for the previous code changes on a prompt copy call or before new code changes are made
+    #   latest: a commit will be automatically performed after each successful set of code changes from the LLM (via applydir)
+    #   off: do not automatically perform commits
+    AUTO_COMMIT: previous # [previous|latest|off]
+    COMMIT_COMMAND: git commit -a -m {{ commit_message }} # commit_message will be filled with the working commit message
+    REVERT_CHANGES_COMMAND: git checkout -- . && git reset
+    LAST_COMMIT_MESSAGE_COMMAND: git log -n 1 | egrep -v '^[A-z]|^\s*$'
+    CHANGES_EXIST_COMMAND: git diff --quiet HEAD
+    CHANGES_EXIST_RESULT: EXIT_CODE
+
+    # A diff can be run from the menu. This (and all commands) will be run from the base directory. If AUTO_DIFF is true, then a diff will be automatically run after each set of changes is successfully applied to the code base.
+    AUTO_DIFF: false # [true|false]
+    DIFF_COMMAND: git diff
+
+    # Testing can be done automatically after each set of changes is successfully applied to the code base.
+    AUTO_TEST: false # [true|false]
+    TEST_COMMAND: pytest tests
+    # If EXIT_CODE is used, will use exit code to determine success (e.g. result from subprocess, which is equivalent of $? in Linux)
+    TEST_SUCCESS: EXIT_CODE
+    SHARE_TEST_RESULTS: false # [true|false]
+
+    # Linting can be done automatically after each set of changes is successfully applied to the code base
+    AUTO_LINT: false # [true|false]
+    LINT_COMMAND: ruff check {{ base_directory }}
+    LINT_SUCCESS: EXIT_CODE
+    SHARE_LINT_RESULTS: false # [true|false]
+
+    # An additional command can be automatically run after changes are successfully applied to the code base. This will be called CMD results in the CLI.
+    AUTO_CMD: false # [true|false]
+    CMD_COMMAND: ruff format {{ base_directory }}
+    SHARE_CMD_RESULTS: false # [true|false]
+
+    # Choose a standard level for logging 
+    LOGGING:
+      LEVEL: "INFO" # [CRITICAL|ERROR|WARNING|INFO|DEBUG]
+
 
 ## vibedir.txt
 The vibedir.txt file is generated from the codebase, dev.md, and other auxillary information needed in order to give na LLM all of the information needed to begin working with the developer. It is used on session init and refresh (for context window) in the cut/paste mode, and every time in API mode. 
@@ -104,45 +191,6 @@ If the user is in clipboard mode, then the vibedir.txt will be split into (~40k 
 
   - User defines additional tasks and pastes into LLM UI (opr writes directly in LLM UI)
   - Additional results are applied
-
-### Config
-    
-    # The LLM is asked to provide a commit message for each set of changes. The following configures how that will be used.
-
-    # If auto commit is set to:
-    # previous: a commit will be automatically performed for the previous code changes before new code changes are made
-    # latest: a commit will be automatically performed after each successful set of code changes from the LLM (via applydir)
-    # off: do not perform commits
-    AUTO_COMMIT: [previous|latest|off]
-    COMMIT_COMMAND: git commit -a -m {{ message }} 
-
-    # Testing can be done automatically after each set of changes is successfully applied to the code base
-    AUTO_TEST: [false|true]
-    TEST_COMMAND: pytest tests
-
-    # Linting can be done automatically after each set of changes is successfully applied to the code base
-    LINT_COMMAND: ruff {{ base_directory }}
-
-    # An additional command can be automatically run after changes are successfully applied to the code base
-    AUTO_COMMAND: ruff format {{ base_directory }}
-    SHARE_AUTO_COMMAND_RESULTS: [false|true]
-
-    # Choose a standard level for logging (CRITICAL, ERROR, WARNING, INFO, or DEBUG)
-    LOGGING:
-      LEVEL: "INFO"
-
-    # The mode determines how vibedir is used:
-    # CLIPBOARD: prompts are shared with an LLM via copy/paste
-    # API: interactions with an LLM are handled via API. Note LLM tag must be defined to use API mode.
-    MODE: [CLIPBOARD|API] if API then LLM tag must be defined 
-    # If using CLIPBOARD mode, set the max number of characters per file (to work around LLM UI file truncation)
-    CLIPBOARD_MAX_CHARS_PER_FILE: 40000
-
-    # If using API mode, the LLM information must be defined (this will be fleshed out as apibump is developed)
-    LLM:
-      model: grok-4
-      endpoint: https://api.x.ai/v1
-      api_key: <todo: figure out how to store/retrieve this, maybe .netrc? What does LiteLLM do?>
 
 ### Token Counting
 - In CLIPBOARD mode, request tokens are counted for each generated prompt, and once 70% of the LLM context window has been reached, an automatic refresh will be triggered (where dev.md, code, and guidelines are reshared). We can also count tokens received in teh applydir.json file, but we have no way to count additional prompt information added by the user in the LLM UI, or additional response information outside of the applydir.json file.  
