@@ -48,6 +48,16 @@ changes_exist_result = "exit_code"
 auto_diff = false  # [true|false]
 diff_command = "git diff"
 
+# ------------------------------------------------------------------
+# ICONS – you can override any of the five status symbols here
+# ------------------------------------------------------------------
+[icons]
+not_configured = "⊘"
+not_run        = "❓"
+running        = "⏳"
+success        = "✅"
+failed         = "❌"
+
 # ===================================================================
 # COMMANDS: Define post-processing actions after LLM code changes
 # ===================================================================
