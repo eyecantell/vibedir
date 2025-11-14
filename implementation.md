@@ -49,14 +49,14 @@ class VibedirConfig(BaseModel):
     auto_test: bool = False
     test_command: str = "pytest tests"
     test_success: str = "EXIT_CODE"  # Flexible; add SUCCESS_PATTERN (e.g., grep) if needed
-    share_test_results: bool = False
+    INCLUDE_TEST_RESULTS: bool = False
     auto_lint: bool = False
     lint_command: str = "ruff check {{ base_directory }}"
     lint_success: str = "EXIT_CODE"
-    share_lint_results: bool = False
+    INCLUDE_LINT_RESULTS: bool = False
     auto_cmd: bool = False
     cmd_command: str = "ruff format {{ base_directory }}"
-    share_cmd_results: bool = False
+    INCLUDE_CMD_RESULTS: bool = False
     logging: Dict[str, str] = Field(default_factory=lambda: {"LEVEL": "INFO"})
 ```
 
@@ -100,7 +100,7 @@ Run command (e.g., tests): ResultsHandler.execute(test_command) → Write to tes
 
 Prompt Generation:
 
-Build vibedir.txt with sections (e.g., [TEST_RESULTS] if share_test_results and add_to_prompt).
+Build vibedir.txt with sections (e.g., [TEST_RESULTS] if INCLUDE_TEST_RESULTS and add_to_prompt).
 Clipboard mode: Split into parts on chars (CLIPBOARD_MAX_CHARS_PER_FILE).
 Token counting: tiktoken on emitted text; refresh at 70% context (warn on user-added uncertainty in clipboard).
 

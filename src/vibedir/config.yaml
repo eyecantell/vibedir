@@ -1,39 +1,62 @@
-APPLY_CHANGES:
-  AUTO_APPLY: false  # Set to true to apply changes without user confirmation
-LOGGING:
-  LEVEL: "INFO"
-prompt_template: |
-  You are an expert code editor. For the provided files, apply the requested changes and return a JSON array with the following structure:
-  [
-    {
-      "file": "<relative_file_path>",
-      "changes": [
-        {
-          "original_lines": [<at least 10 lines to replace for existing files, or all lines for files shorter than 10, or empty for new files>],
-          "changed_lines": [<new lines, includes original_lines plus new lines for additions, subset for deletions, or full content for new files>]
-        }
-      ]
-    }
-  ]
-  - All changes (modifications, additions, deletions, creations) will be treated as replacements (changed_lines for original_lines).
-  - For existing files, include at least 10 lines in original_lines (or all lines for files shorter than 10) to ensure a unique match.
-  - For additions, include 10 lines for context around the insertion point in original_lines, duplicate the context lines in changed_lines, and include new lines.
-  - For deletions, include the lines to delete in original_lines (with surrounding lines as needed to reach 10 lines) and exclude the lines to be deleted from changed_lines.
-  - For new files, use empty original_lines ([]) and include the full content in changed_lines.
-  - Merge changes within 10 lines of each other into a single change for existing files.
-  - Ensure changed_lines are syntactically correct for the language (e.g., Python for .py files, Markdown for .md files).
-  - Use relative file paths (e.g., src/main.py) matching the provided file listing.
 
-  Files:
-  <insert full file content from prepdir>
 
-  Changes: <user-supplied prompt, e.g., "Add a save button to the top menu">
-  
-llm:
-  provider: grok
+
+# Note this file holds user default settings. If config changes are made during a session, those are automatically reloaded on the next session. To prevent this load, remove or rename .vibedir/config.json
+
+# The mode determines how vibedir is used:
+# CLIPBOARD: prompts are shared with an LLM via copy/paste
+# API: interactions with an LLM are handled via API. 
+# Note LLM tag must be defined to use API mode.
+MODE: [CLIPBOARD|API] # if API then LLM tag must be defined
+
+# If using API mode, the following LLM information must be defined (this will be fleshed out as apibump is developed)
+# The plan is to require an LLM key and an APIBUMP key to be defined in .netrc/other
+LLM:
+  model: grok-4
   endpoint: https://api.x.ai/v1
-  api_key: your_grok_api_key
-  model: grok-3
+
+# If using CLIPBOARD mode, set the max number of characters per file (to work around LLM UI file truncation)
+CLIPBOARD_MAX_CHARS_PER_FILE: 40000
+  
+# The LLM can be asked to provide a commit message for each set of changes. The following configures how that will be used. If ASK_LLM_FOR_COMMIT_MESSAGE is set to false, then we will not ask for commit messages from the LLM (token savings) but the user will need to generate an appropriate commit message for each set of changes.
+ASK_LLM_FOR_COMMIT_MESSAGE: true # [true|false]
+
+# If auto commit is set to:
+#   previous: a commit will be automatically performed for the previous code changes on a prompt copy call or before new code changes are made
+#   latest: a commit will be automatically performed after each successful set of code changes from the LLM (via applydir)
+#   off: do not automatically perform commits
+AUTO_COMMIT: previous # [previous|latest|off]
+COMMIT_COMMAND: git commit -a -m {{ commit_message }} # commit_message will be filled with the working commit message
+REVERT_CHANGES_COMMAND: git checkout -- . && git reset
+LAST_COMMIT_MESSAGE_COMMAND: git log -n 1 | egrep -v '^[A-z]|^\s*$'
+CHANGES_EXIST_COMMAND: git diff --quiet HEAD
+CHANGES_EXIST_RESULT: EXIT_CODE
+
+# A diff can be run from the menu. This (and all commands) will be run from the base directory. If AUTO_DIFF is true, then a diff will be automatically run after each set of changes is successfully applied to the code base.
+AUTO_DIFF: false # [true|false]
+DIFF_COMMAND: git diff
+
+# Testing can be done automatically after each set of changes is successfully applied to the code base.
+AUTO_TEST: false # [true|false]
+TEST_COMMAND: pytest tests
+# If EXIT_CODE is used, will use exit code to determine success (e.g. result from subprocess, which is equivalent of $? in Linux)
+TEST_SUCCESS: EXIT_CODE
+INCLUDE_TEST_RESULTS: false # [true|false]
+
+# Linting can be done automatically after each set of changes is successfully applied to the code base
+AUTO_LINT: false # [true|false]
+LINT_COMMAND: ruff check {{ base_directory }}
+LINT_SUCCESS: EXIT_CODE
+INCLUDE_LINT_RESULTS: false # [true|false]
+
+# An additional command can be automatically run after changes are successfully applied to the code base. This will be called CMD results in the CLI.
+AUTO_CMD: false # [true|false]
+CMD_COMMAND: ruff format {{ base_directory }}
+INCLUDE_CMD_RESULTS: false # [true|false]
+
+# Choose a standard level for logging 
+LOGGING:
+  LEVEL: "INFO" # [CRITICAL|ERROR|WARNING|INFO|DEBUG]
 
 linting:
   python:

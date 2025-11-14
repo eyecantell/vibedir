@@ -11,25 +11,50 @@ VibeDir is a utility to facilitate code modifications when using an AI assistant
 ## CLI UI (in design phase)
 
 ### CLI UI Main Menu Header
-- Current Prompt ('c' to [commit current changes and] copy prompt to clipboard)
-  - Task: [blank|preview of current task wording...] ('t' to set)
-  - Auxillary: [n files] [dev.md] [tests] [linting] [CMD]
-  - Manual changes: file1, file2, ... # if manual changes detected
-- Tests: [✅ success|⏳running|❌ failed|� not run] - Lint: [✅ success|⏳running|❌ failed|� not run]  - CMD: [✅ success|⏳running|❌ failed|� not run] 
-- Menues: Test ('T'), Lint ('L'), CMD ('C'), Source Control ('S')
+- Current Prompt ('p') to [commit current changes and] [send|copy prompt to clipboard]
+  - Errors: [Error encountered when applying latest changes.]
+  - Results: [Tests⏳|✅|❌|�] - [Lint⏳|✅|❌|�] - [CMD⏳|✅|❌|�]
+  - Auxillary: [n files] [dev.md]
+  - Detected changes: file1, file2, ... # if manual changes detected
+  - Task ('t' to [set|edit]): [blank|preview of current task wording...] 
+
+- Other Results: [Changes⏳|✅|❌] - [Tests⏳|✅|❌|⊘] - [Lint⏳|✅|❌|⊘] - [CMD⏳|✅|❌|⊘]
+- Legend: success✅ - running⏳ - failed❌ -  not run� - not configured⊘ 
+         
+- Menus: ('m') Test, Lint, CMD, Source Control settings
 - Last commit: (Last commit message)
 - Working commit: (Working commit message) # if current changes
 
-The [commit current changes and] portion of the Current Prompt message will be displayed if changes have been made (as detected by CHANGES_EXIST_RESULT)
-Test/Lint/CMD results will only be displayed if TEST_COMMAND, LINT_COMMAND, CMD_COMMAND are set (respectively) 
+### Notes on Main Menu Header fields:
+The [commit current changes and] portion of the Current Prompt top message will be displayed if changes have been made (as detected by CHANGES_EXIST_RESULT) and AUTO_COMMIT is set to 'previous'.
+
+The [send|copy prompt to clipboard] will be "send" if MODE = API, and "copy prompt to clipboard" if MODE = CLIPBOARD
+
+Each of the Test, Lint, and CMD results will be shown in either the Results section (if INCLUDE_*_RESULTS=true) or the Other Results section (if INCLUDE_*_RESULTS=true). 
+The icons next to each of Test, Link, CMD will be:
+- ✅ if the configured *_COMMAND has run and *_SUCCESS yields true
+- ❌ if the configured *_COMMAND has run and *_SUCCESS yields false
+- ⏳ if the configured *_COMMAND is still running
+- � if AUTO_* is set to false and the configured *_COMMAND has not been run manually
+- ⊘ if the *_COMMAND value is not set
+ 
+ Other Results: "Changes" will have icon:
+  - ✅ if applydir applied the latest changes (applydir.json) successfully
+  - ❌ if applydir encountered errors when applying the latest changes
+  - ⏳ if the configured *_COMMAND is still running
 
 ### CLI UI Main Menu
-1. [Set|Edit] Task ('t')  # Will be 'Set' if task is currently empty
-2. Add files to prompt
-3. Run tests # if TEST_COMMAND available
-3. Add Test Results # only if test results are available and not already in prompt
-4. Run lint # if LINT_COMMAND available
-4. Add Linting Results # only if linting results are available and not already in prompt
+1. Refresh info without action ('space bar')
+2. [Set|Edit] prompt task ('p')  # Will be 'Set' if task is currently empty
+3. Add files to prompt
+
+3. Run tests ('t') # if TEST_COMMAND available
+3. Re-run tests ('t') $ TEST_COMMAND available and test results available
+4. Add Test Results to prompt # only if test results are available and not already in prompt
+
+5. Run lint # if LINT_COMMAND available
+5. Re-run lint # LINT_COMMAND available and lint results available
+6. Add Linting Results # only if linting results are available and not already in prompt
 5. Run CMD # if CMD_COMMAND available
 5. Add CMD Results # only if AUTO_COMMAND results are available and not already in prompt
 6. Run command ('R') and include output in prompt ('r')
@@ -37,11 +62,11 @@ Test/Lint/CMD results will only be displayed if TEST_COMMAND, LINT_COMMAND, CMD_
 
 ### CLI UI Test/Lint/CMD Menu Header
 Test results in prompt: [Yes|No]
-Result: [✅ success|⏳running|❌ failed|� not run]
+Result: [success✅|running⏳|failed❌|not run�]
 Result File: /my/temp/test/results/file/full/path.txt # blank if not available - clickable for vscode edit
 Test Command: {TEST_COMMAND}
 Test Result: {TEST_SUCCESS}
-Auto Test: {AUTO_TEST} - Share Test Results: {SHARE_TEST_RESULTS}
+Auto Test: {AUTO_TEST} - Share Test Results: {INCLUDE_TEST_RESULTS}
 
 The above menu will act as the template for Tests, Lint, and CMD menues
 
@@ -56,64 +81,6 @@ The above menu will act as the template for Tests, Lint, and CMD menues
 ### CLI UI Source Control Menu 
 - TBD
 ---
-
-### Config
-    
-    # The mode determines how vibedir is used:
-    # CLIPBOARD: prompts are shared with an LLM via copy/paste
-    # API: interactions with an LLM are handled via API. Note LLM tag must be defined to use API mode.
-    MODE: [CLIPBOARD|API] if API then LLM tag must be defined 
-    # If using CLIPBOARD mode, set the max number of characters per file (to work around LLM UI file truncation)
-    CLIPBOARD_MAX_CHARS_PER_FILE: 40000
-
-    # If using API mode, the LLM information must be defined (this will be fleshed out as apibump is developed)
-    LLM:
-      model: grok-4
-      endpoint: https://api.x.ai/v1
-      api_key: <todo: figure out how to store/retrieve this, maybe .netrc? What does LiteLLM do?>
-      
-    # Configuration for vibedir uses defaults or config.yaml.  If config changes are made in a session, those are automatically reloaded on the next session. To prevent this load, remove or rename .vibedir/conifg.json
-
-    # The LLM can be asked to provide a commit message for each set of changes. The following configures how that will be used. If ASK_LLM_FOR_COMMIT_MESSAGE is set to false, then we will not ask for commit messages from the LLM (token savings) but the user will need to generate an appropriate commit message for each set of changes.
-    ASK_LLM_FOR_COMMIT_MESSAGE: true # [true|false]
-
-    # If auto commit is set to:
-    #   previous: a commit will be automatically performed for the previous code changes on a prompt copy call or before new code changes are made
-    #   latest: a commit will be automatically performed after each successful set of code changes from the LLM (via applydir)
-    #   off: do not automatically perform commits
-    AUTO_COMMIT: previous # [previous|latest|off]
-    COMMIT_COMMAND: git commit -a -m {{ commit_message }} # commit_message will be filled with the working commit message
-    REVERT_CHANGES_COMMAND: git checkout -- . && git reset
-    LAST_COMMIT_MESSAGE_COMMAND: git log -n 1 | egrep -v '^[A-z]|^\s*$'
-    CHANGES_EXIST_COMMAND: git diff --quiet HEAD
-    CHANGES_EXIST_RESULT: EXIT_CODE
-
-    # A diff can be run from the menu. This (and all commands) will be run from the base directory. If AUTO_DIFF is true, then a diff will be automatically run after each set of changes is successfully applied to the code base.
-    AUTO_DIFF: false # [true|false]
-    DIFF_COMMAND: git diff
-
-    # Testing can be done automatically after each set of changes is successfully applied to the code base.
-    AUTO_TEST: false # [true|false]
-    TEST_COMMAND: pytest tests
-    # If EXIT_CODE is used, will use exit code to determine success (e.g. result from subprocess, which is equivalent of $? in Linux)
-    TEST_SUCCESS: EXIT_CODE
-    SHARE_TEST_RESULTS: false # [true|false]
-
-    # Linting can be done automatically after each set of changes is successfully applied to the code base
-    AUTO_LINT: false # [true|false]
-    LINT_COMMAND: ruff check {{ base_directory }}
-    LINT_SUCCESS: EXIT_CODE
-    SHARE_LINT_RESULTS: false # [true|false]
-
-    # An additional command can be automatically run after changes are successfully applied to the code base. This will be called CMD results in the CLI.
-    AUTO_CMD: false # [true|false]
-    CMD_COMMAND: ruff format {{ base_directory }}
-    SHARE_CMD_RESULTS: false # [true|false]
-
-    # Choose a standard level for logging 
-    LOGGING:
-      LEVEL: "INFO" # [CRITICAL|ERROR|WARNING|INFO|DEBUG]
-
 
 ## vibedir.txt
 The vibedir.txt file is generated from the codebase, dev.md, and other auxillary information needed in order to give na LLM all of the information needed to begin working with the developer. It is used on session init and refresh (for context window) in the cut/paste mode, and every time in API mode. 
