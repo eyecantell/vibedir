@@ -7,12 +7,12 @@
 # clipboard: prompts are shared with an LLM via copy/paste
 # api: interactions with an LLM are handled via API. 
 # Note LLM tag must be defined to use API mode.
-mode = "clipboard"  # [clipboard|api] if api then LLM tag must be defined
+mode = "clipboard"  # [clipboard|api] if api then llm tag must be defined
 
 [llm]
 # If using API mode, the following LLM information must be defined
 # (this will be fleshed out as apibump is developed)
-# The plan is to require an LLM key and an APIBUMP key to be defined in .netrc/other
+# The plan is to require an LLM key and an apibump key to be defined in .netrc/other
 model = "grok-4"
 endpoint = "https://api.x.ai/v1"
 
@@ -28,6 +28,8 @@ clipboard_max_chars_per_file = 40000
 # messages from the LLM (token savings) but the user will need to generate an
 # appropriate commit message for each set of changes.
 ask_llm_for_commit_message = true  # [true|false]
+show_working_commit_message = true  # [true|false] show the working commit message in the header
+show_previous_commit_message = true  # [true|false] show the previous commit message in the header
 
 # If auto commit is set to:
 #   previous: a commit will be automatically performed for the previous code changes
@@ -50,13 +52,16 @@ diff_command = "git diff"
 
 # ------------------------------------------------------------------
 # ICONS – you can override any of the five status symbols here
+# Symbols can be unicode characters or the special "spinner" value
+# to show an animated spinner in that location.
 # ------------------------------------------------------------------
 [icons]
-not_configured = "⊘"
+not_configured = "⚠️"
 not_run        = "❓"
-running        = "⏳"
+waiting        = "⏳"
 success        = "✅"
 failed         = "❌"
+running        = "spinner"
 
 # ===================================================================
 # COMMANDS: Define post-processing actions after LLM code changes
@@ -66,24 +71,29 @@ failed         = "❌"
 # in the next LLM prompt.
 # Configuration:
 # name = "name" the name that is associated with the command
-# show_in_header = [true|false] # if true the command state will be shown in the menu header
-# hot_key = '<key>'  # if set then the given hotkey will automatically run the command (be careful not to clobber here)
-# include_results = [true|false]  # if true then results will be included in the next prompt
+# show_in_header = [true|false] # if true the command state will be shown in the menu header. Default is false.
+# hot_key = '<key>'  # if set then the given hotkey will automatically run the command (be careful not to clobber here). Default is no hotkey.
+# command = "command to run"  # the command to run. May include {{ base_directory }} template variable. Must be defined or results will show bad config icon (e.g. ⚠️).
+# include_results = [true|false]  # if true then results will be included in the next prompt. Default is false.
 # success = [exit_code|command]  # command to run to determine success of command run. If exit_code (default) is used, will use exit code to determine success (e.g. result from subprocess, which is equivalent of $? in Linux)
 # run_on = <one or more of the following>:
-# - changes_success   → after code successfully applied
-# - changes_failed    → if applydir fails
+# - changes_received  → after code changes received from LLM (e.g. in applydir.json)
+# - changes_success   → after code changes application successful
+# - changes_failed    → after code changes application failed
 # - revert            → after git revert
 # - startup           → when vibedir starts
-# - no_manual         → do not create manual run option in menu 
+# - no_manual         → do not create manual run option in menu for this command. Default is to create manual run option.
 # - prompt_send       → before sending prompt to LLM (will be on prompt copy is clipboard mode)
 # - prompt_receive    → after LLM response received (API mode only)
 
+[[command]]  # Does it make sense to define this here or should we handle it specially in code?
+name = "Code Changes"
+run_on = ["changes_received"]
+command = "apply_code_changes" # special command to apply code changes from applydir.json
+
 [[command]]
 name = "Format Code"
-show_in_header = false
 run_on = ["changes_success"]
-include_results = false
 command = "ruff format {{ base_directory }}"
 
 [[command]]
@@ -100,8 +110,14 @@ hotkey = 't'
 show_in_header = true
 run_on = ["changes_success"]
 include_results = true
-command = "pytest tests"
+command = "pytest {{ tests_directory }}"
 success = "exit_code"
+
+# Show legend in the header
+show_command_legend_in_header = true  # [true|false]
+
+# Default tests directory (used in Tests command above)
+tests_directory = "{{ base_directory }}/tests"
 
 # Choose a standard level for logging 
 [logging]
