@@ -79,8 +79,8 @@ The status icons next to each of command will be:
 
 ### Main Menu Header v2
 
-Latest changes (n files) 'd' diff  |  Prompt 's|c' to send|copy, 'e' to edit, 'h' history  | Command Results (in prompt/out)
-file1.py
+Latest changes (n files) 'd' diff 'r' revert |  Prompt 'ctrl-enter' to send (sync with prompt.md) | Command Results (in prompt/out of prompt)
+file1.py                                     
 file2.py
 ...
 
