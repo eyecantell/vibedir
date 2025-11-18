@@ -58,7 +58,7 @@ SUBDIR_CFG = pathlib.Path(".vibedir/config.toml")
 
 
 def load_config() -> Dict[str, Any]:
-    cfg = {"commands": [], "icons": DEFAULT_ICONS.copy()}
+    cfg = {"commands": [], "status_icons": DEFAULT_ICONS.copy()}
     for path in (ROOT_CFG, SUBDIR_CFG):
         if path.exists():
             try:
@@ -74,8 +74,8 @@ def load_config() -> Dict[str, Any]:
                     "failed": Status.FAILED,
                 }
                 for key, internal in mapping.items():
-                    if key in raw.get("icons", {}):
-                        cfg["icons"][internal] = raw["icons"][key]
+                    if key in raw.get("status_icons", {}):
+                        cfg["status_icons"][internal] = raw["status_icons"][key]
 
                 # ---- commands ----
                 for cmd_cfg in raw.get("command", []):
@@ -87,7 +87,7 @@ def load_config() -> Dict[str, Any]:
 
 
 CONFIG = load_config()
-ICONS = CONFIG["icons"]
+ICONS = CONFIG["status_icons"]
 COMMANDS: List[Command] = CONFIG["commands"]
 
 

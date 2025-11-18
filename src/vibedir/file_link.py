@@ -35,6 +35,7 @@ class FileLink(Widget):
 
     class Clicked(Message):
         """Posted when the link is activated."""
+
         def __init__(self, path: Path, line: Optional[int], column: Optional[int]) -> None:
             super().__init__()
             self.path = path
@@ -72,7 +73,7 @@ class FileLink(Widget):
             self._path.name,
             id="btn",
             tooltip=str(self._path),
-            variant="default"  # Move variant here if needed, but 'default' is already the default
+            variant="default",  # Move variant here if needed, but 'default' is already the default
         )
 
     # ------------------------------------------------------------------ #

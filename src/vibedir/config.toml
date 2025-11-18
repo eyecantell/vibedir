@@ -51,11 +51,11 @@ auto_diff = false  # [true|false]
 diff_command = "git diff"
 
 # ------------------------------------------------------------------
-# ICONS – you can override any of the five status symbols here
+# STATUS_ICONS – you can override any of the five status symbols here
 # Symbols can be unicode characters or the special "spinner" value
 # to show an animated spinner in that location.
 # ------------------------------------------------------------------
-[icons]
+[status_icons]
 not_configured = "⚠️"
 not_run        = "❓"
 waiting        = "⏳"
@@ -122,3 +122,10 @@ tests_directory = "{{ base_directory }}/tests"
 # Choose a standard level for logging 
 [logging]
 level = "INFO"  # [CRITICAL|ERROR|WARNING|INFO|DEBUG]
+
+# ===================================================================
+# PROMPT_ICONS – icons used in prompt.md headers and TUI avatars
+# ===================================================================
+[prompt_icons]
+user = "👤"
+assistant = "🤖"

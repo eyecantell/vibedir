@@ -5,7 +5,7 @@
 groups = ["default", "test"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:46508cc8cb98b77bae697997f0367e8aad7dc3a9b83a7e569aa87abb3d7b51e9"
+content_hash = "sha256:ba7b77ccd95732d70e3577ec6b51bdbca5b8f16d688fad2ee944badb7dd38a2b"
 
 [[metadata.targets]]
 requires_python = ">=3.9"
@@ -1200,6 +1200,17 @@ files = [
     {file = "tiktoken-0.12.0-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:15d875454bbaa3728be39880ddd11a5a2a9e548c29418b41e8fd8a767172b5ec"},
     {file = "tiktoken-0.12.0-cp39-cp39-win_amd64.whl", hash = "sha256:2cff3688ba3c639ebe816f8d58ffbbb0aa7433e23e08ab1cade5d175fc973fb3"},
     {file = "tiktoken-0.12.0.tar.gz", hash = "sha256:b18ba7ee2b093863978fcb14f74b3707cdc8d4d4d3836853ce7ec60772139931"},
+]
+
+[[package]]
+name = "toml"
+version = "0.10.2"
+requires_python = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
+summary = "Python Library for Tom's Obvious, Minimal Language"
+groups = ["default"]
+files = [
+    {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},
+    {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},
 ]
 
 [[package]]

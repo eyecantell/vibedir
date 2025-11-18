@@ -14,7 +14,7 @@ VibeDir is a utility to facilitate code modifications when using an AI assistant
 ### User runs: vibedir CLI from the desired working directory
 1. TUI menu pops up with options to:
   - Start new session (or refresh session) - this loads full session context (dev.md, code change instructions, etc.)
-  - Define prompt (task, files, command results) for LLM
+  - Define prompt (task, files, command results) for LLM (can be done in prompt.md)
   - Generate prompt (vibedir.txt file split into parts as needed if clipboard mode) that hold task and context information and copy to clipboard or send via API
 
   - On LLM answer
@@ -79,7 +79,7 @@ The status icons next to each of command will be:
 
 ### Main Menu Header v2
 
-Latest changes (n files) 'd' diff 'r' revert |  Prompt 'ctrl-enter' to send (sync with prompt.md) | Command Results (in prompt/out of prompt)
+Latest changes (n files) 'd' diff 'r' revert |  Prompt 'ctrl-enter' to send (sync with prompt.md, see prompt_design.md) | Command Results (in prompt/out of prompt)
 file1.py                                     
 file2.py
 ...

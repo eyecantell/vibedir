@@ -14,13 +14,13 @@ ResultsHandler: Executes commands safely, writes to result files, evaluates succ
 
 Persistence Layer:
 
-Directory: Hardcoded .vibedir/ relative to CWD (launch dir). No env var or git-root detection—assumes consistent launch from project root to avoid subproject conflicts.
+Directory: Hardcoded .vibedir/ relative to CWD (launch dir). No env var or git-root detection-assumes consistent launch from project root to avoid subproject conflicts.
 Files:
 
 .vibedir/config.yaml: User-editable defaults (optional; falls back to model defaults).
 .vibedir/config.json: Session changes (always loaded/applied on start; overwrites YAML in memory).
 .vibedir/state.json: Runtime state.
-.vibedir/results/: Single output files (e.g., test_output.txt, lint_output.txt, cmd_output.txt)—overwritten on re-run; no history or cleanup.
+.vibedir/results/: Single output files (e.g., test_output.txt, lint_output.txt, cmd_output.txt)-overwritten on re-run; no history or cleanup.
 
 
 
@@ -61,7 +61,7 @@ class VibedirConfig(BaseModel):
 ```
 
 VibedirState (Runtime/Session Data)
-Pydantic BaseModel; persisted in .vibedir/state.json. No dynamic fields (e.g., last_commit)—refreshed on-demand.
+Pydantic BaseModel; persisted in .vibedir/state.json. No dynamic fields (e.g., last_commit)-refreshed on-demand.
 
 ```
 pythonfrom pydantic import BaseModel, Field
@@ -119,7 +119,7 @@ Integrations and Safety
 
 Subprocess Handling: Use shlex.split + list args (e.g., subprocess.run(cmd_list, cwd=base_dir, timeout=300)). Replace {{base_directory}} safely. Eval success with EXIT_CODE (default); optional SUCCESS_PATTERN (grep output).
 Git/Source Control: Conditional on ask_llm_for_commit_message (ask LLM for msgs if true). Dynamics via commands (e.g., CHANGES_EXIST_COMMAND); run on refresh.
-Token Math: Separate from splitting—tiktoken for context refresh threshold.
+Token Math: Separate from splitting-tiktoken for context refresh threshold.
 Error Handling: Rich exceptions; log via stdlib (dictConfig). No global state.
 Testability: Injectable Executor protocol (default: SubprocessExecutor; mock for pytest).
 Future Hooks: Plugin registry for custom result types (e.g., coverage); but keep minimal now.

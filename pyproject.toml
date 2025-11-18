@@ -38,18 +38,18 @@ keywords = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "typing-extensions>=4.7.1",
-    "pyyaml>=6.0",
-    "prepdir>=0.18.0",
     "applydir>=0.3.0",
-    "openai>=1.84.0",
     "dynaconf>=3.2.6",
     "openai>=2.1.0",
+    "prepdir>=0.18.0",
+    "pyperclip>=1.11.0",
+    "pyyaml>=6.0",
     "textual>=6.6.0",
     "tiktoken>=0.12.0",
-    "watchdog>=6.0.0",
-    "pyperclip>=1.11.0",
+    "toml>=0.10.2",
     "tomli>=2.3.0",
+    "typing-extensions>=4.7.1",
+    "watchdog>=6.0.0",
 ]
 
 [project.optional-dependencies]

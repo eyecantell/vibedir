@@ -15,31 +15,31 @@ Goals:
 The `.vibedir/prompt.md` file uses simple Markdown with strict, predictable section headers for easy parsing and readability. Headers are designed to be unique and unlikely to appear in normal content.
 
 Example:
-```markdown
-# vibedir session — 2025-11-17T14:22:31
+```
+# vibedir session - 2025-11-17T14:22:31.111
 
-## User — 2025-11-17 14:22:31
+## 👤User - 2025-11-17 14:22:31.222
 
 Write a fastapi app that serves my plotly dashboards.
 
-## Assistant (grok-4) — 2025-11-17 14:23:15
+## 🤖Assistant (grok-4) - 2025-11-17 14:23:15.312
 
 Here is the initial implementation...
 
 ```python
 from fastapi import FastAPI
 ...
-```
 
-## User — 2025-11-17 14:25:10
+
+## 👤User - 2025-11-17 14:25:10.123
 
 Add authentication with JWT.
 
-## Assistant (grok-4) — 2025-11-17 14:25:48
+## 🤖Assistant (grok-4) - 2025-11-17 14:25:48.124
 
 Updated with JWT auth...
 
-## Pending → (edit below — Ctrl+Enter to send)
+## 👤Pending → (edit below)
 
 Make it use async and add rate limiting.
 Also here is the current error I'm seeing:
@@ -48,20 +48,19 @@ Also here is the current error I'm seeing:
 Traceback (most recent call last):
   File ...
 ```
-```
 
 Rules:
-- **Session Header**: Exactly one top-level `# vibedir session — <ISO-timestamp>` at the start (e.g., ISO 8601 without timezone for simplicity).
+- **Session Header**: Exactly one top-level `# vibedir session - <ISO-timestamp>` at the start (e.g., ISO 8601 without timezone for simplicity).
 - **Message Sections**: 
-  - `## User — YYYY-MM-DD HH:MM:SS` for user messages.
-  - `## Assistant (<model>) — YYYY-MM-DD HH:MM:SS` for LLM responses (model in parens, e.g., `grok-4`).
-- **Pending Section**: Always the last section: `## Pending → (edit below — Ctrl+Enter to send)`. This holds the in-progress prompt.
+  - `## 👤User - YYYY-MM-DD HH:MM:SS.sss` for user messages.
+  - `## 🤖Assistant (<model>) - YYYY-MM-DD HH:MM:SS.sss` for LLM responses (model in parens, e.g., `grok-4`).
+- **Pending Section**: Always the last section: `## 👤Pending → (edit below)`. This holds the in-progress prompt.
 - **Formatting**: 
   - Blank line after every header.
   - Content under headers can include any Markdown (e.g., code blocks, lists, bold text).
-  - No other lines start with `## ` to avoid parsing ambiguity.
-- **Timestamps**: Use local time or UTC? Decide based on implementation (e.g., `datetime.now().strftime("%Y-%m-%d %H:%M:%S")`).
-- **Parsing Regex**: Headers match `^## (User|Assistant \(.+?\)|Pending → .+) — \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$` or similar. Content is everything until the next header.
+
+- **Timestamps**: Use local time for simplicity
+- **Parsing Regex**: Headers match `^## (👤User|🤖Assistant \(.+?\)|👤Pending → .+) - \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$` or similar. Content is everything until the next header.
 
 This format ensures:
 - Readability in any Markdown viewer or editor.
@@ -81,11 +80,11 @@ This format ensures:
   - On keystroke (debounced 300-500ms): Rewrite *only* the Pending section in the file (preserve history).
   - If external change during debounce: Discard local changes, reload from file (external editor wins to avoid conflicts).
   - Ctrl+Enter (submit):
-    - Append new `## User — <now>` with TextArea content.
-    - Add empty `## Pending → ...` section.
+    - Append new `## 👤User - <now>` with TextArea content.
+    - Add empty `## 👤Pending → ...` section.
     - Clear TextArea.
-    - Send to LLM.
-    - On LLM response: Append `## Assistant (<model>) — <now>` + response.
+    - Send to LLM. (will break into roles appropriately for api mode, will only include information since the latest Assistant response if in clipboard mode)
+    - On LLM response: Append `## 🤖Assistant (<model>) - <now>` + response.
 - **Conflict Handling**: Minimal risk since history is append-only and immutable; only Pending is editable. If user edits history externally, TUI reflects it immediately (useful for corrections).
 
 ## TUI Features
@@ -117,7 +116,7 @@ This format ensures:
 - **Malformed File**: Parser falls back gracefully (e.g., treat unknown sections as part of previous; recreate missing Pending).
 - **Long Histories**: Lazy loading in TUI; file remains full for external tools.
 - **Session Management**: Support loading old files; users can copy for branching.
-- **Timestamp Conflicts**: Use seconds precision; if dupes, append milliseconds if needed.
+- **Timestamp Conflicts**: Use milliseconds precision.
 
 ## Bonus Features Enabled
 - **Search/Grep**: Full history in file for IDE searching.
@@ -128,10 +127,6 @@ This format ensures:
 - **Scripting**: Parse file for automation (e.g., extract code blocks).
 
 ## Open Questions / TODOs
-- Timestamp format: Local vs UTC? Include timezone?
-- Model Name: Hardcode or dynamic based on LLM used?
-- Error Handling: What if file is locked/deleted mid-session?
-- Multi-Project: Auto-detect `.vibedir/` in cwd, or require flag?
-- Add your notes/changes here...
-
-This design is ready for implementation. Start with file parser + writer, then watcher, then integrate into ChatWidget.
+- Model Name: Hardcode or dynamic based on LLM used? Will be dynamic from LLM (this is handled by applydir - if this causes trouble will not include)
+- Error Handling: What if file is locked/deleted mid-session? Show error to user with option to check again (they fix) or start a new file (overwrite prompt.md)
+- Multi-Project: Auto-detect `.vibedir/` in cwd

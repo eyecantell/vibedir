@@ -1,7 +1,7 @@
 # Vibedir as a Pluggable Orchestration Layer: Recommended Approach
 
 ## Overview
-Vibedir is designed as an orchestration tool for LLM-driven code development workflows, managing tasks like codebase preparation, prompt generation, change application, post-processing (e.g., linting, testing), and version control integration. To make vibedir truly flexible and future-proof—allowing components like codebase generation (currently handled by prepdir) or change application (handled by applydir) to be swapped with alternatives (e.g., Aider's methods or custom implementations)—implement a **pluggable architecture**.
+Vibedir is designed as an orchestration tool for LLM-driven code development workflows, managing tasks like codebase preparation, prompt generation, change application, post-processing (e.g., linting, testing), and version control integration. To make vibedir truly flexible and future-proof-allowing components like codebase generation (currently handled by prepdir) or change application (handled by applydir) to be swapped with alternatives (e.g., Aider's methods or custom implementations)-implement a **pluggable architecture**.
 
 This approach uses Python's **Abstract Base Classes (ABCs)** to define interfaces, **dynamic module importing** (via `importlib`) for runtime loading, and **configuration-driven selection** (via vibedir's TOML config) to specify plugins. For broader ecosystems, enhance with **entry points** from `setuptools` for automatic plugin discovery. This mirrors plugin systems in tools like pytest or Flask, enabling loose coupling while keeping vibedir's core workflow (e.g., menu-driven UI, hotkeys, revert handling) intact.
 
@@ -168,4 +168,4 @@ For user-contributed plugins:
 - **Documentation**: Add a "Plugins" section in README.md with examples for custom plugins.
 - **Migration Path**: Start with prepdir/applydir defaults; test Aider wrapper separately.
 
-This design positions vibedir as a robust, adaptable orchestrator—ready for replacements like Aider while maintaining its unique strengths.
+This design positions vibedir as a robust, adaptable orchestrator-ready for replacements like Aider while maintaining its unique strengths.
