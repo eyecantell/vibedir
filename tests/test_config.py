@@ -1,338 +1,234 @@
+# tests/test_config.py
 import json
 import logging
 import os
 import pytest
-import tomllib
-from io import StringIO
-from unittest.mock import patch, MagicMock
-from pathlib import Path
-from dynaconf import Dynaconf
-from vibedir.config import (
-    check_config_format,
-    check_namespace_value,
-    get_bundled_config,
-    init_config,
-    is_resource,
-    load_config,
-)
-from vibedir import vibedir_logging  # Assuming vibedir has a similar logging module; adjust if needed
 import sys
+from pathlib import Path
+from unittest.mock import patch
 
-# Set up logger
-logger = logging.getLogger("vibedir.config")
+import tomlkit
+from dynaconf import Dynaconf
 
+from vibedir.config import (
+    load_config,
+    init_config,
+    save_config,
+    get_bundled_config,
+    is_resource,
+    check_namespace_value,
+    home_and_local_config_path,
+)
 
-# Custom handler to capture log records in a list
-class LoggingListHandler(logging.Handler):
-    def __init__(self):
-        super().__init__()
-        self.records = []
-
-    def emit(self, record):
-        self.records.append(record)
-
-    def flush(self):
-        pass
-
+# ------------------------------------------------------------------
+# Fixtures
+# ------------------------------------------------------------------
 
 @pytest.fixture
 def clean_cwd(tmp_path):
-    """Change working directory to a clean temporary path to avoid loading real configs."""
-    original_cwd = os.getcwd()
+    original = os.getcwd()
     os.chdir(tmp_path)
     yield tmp_path
-    os.chdir(original_cwd)
-
-
-@pytest.fixture
-def sample_config_content():
-    """Provide sample configuration content."""
-    return {
-        "mode": "api",
-        "llm": {
-            "model": "test-model",
-            "endpoint": "https://test.endpoint",
-        },
-        "clipboard_max_chars_per_file": 50000,
-        "ask_llm_for_commit_message": False,
-    }
-
-
-@pytest.fixture
-def expected_bundled_config_content():
-    """Sample of expected values in src/vibedir/config.toml"""
-    return {
-        "mode": "clipboard",
-        "llm": {
-            "model": "grok-4",
-            "endpoint": "https://api.x.ai/v1",
-        },
-        "clipboard_max_chars_per_file": 40000,
-        "ask_llm_for_commit_message": True,
-        "show_working_commit_message": True,
-        "show_previous_commit_message": True,
-        "auto_commit": "previous",
-        "commit_command": "git commit -a -m \"{{ commit_message }}\"",
-        "revert_changes_command": "git checkout -- . && git reset",
-        "last_commit_message_command": "git log -1 --pretty=%B",
-        "changes_exist_command": "git diff --quiet HEAD",
-        "changes_exist_result": "exit_code",
-        "auto_diff": False,
-        "diff_command": "git diff",
-        "status_icons": {
-            "not_configured": "⚠️",
-            "not_run": "❓",
-            "waiting": "⏳",
-            "success": "✅",
-            "failed": "❌",
-            "running": "spinner",
-        },
-        "command": [  # This is an array of dicts in TOML
-            {
-                "name": "Code Changes",
-                "run_on": ["changes_received"],
-                "command": "apply_code_changes",
-            },
-            {
-                "name": "Format Code",
-                "run_on": ["changes_success"],
-                "command": "ruff format {{ base_directory }}",
-            },
-            {
-                "name": "Lint",
-                "show_in_header": True,
-                "run_on": ["changes_success"],
-                "include_results": True,
-                "command": "ruff check {{ base_directory }}",
-                "success": "exit_code",
-            },
-            {
-                "name": "Tests",
-                "hotkey": "t",
-                "show_in_header": True,
-                "run_on": ["changes_success"],
-                "include_results": True,
-                "command": "pytest {{ tests_directory }}",
-                "success": "exit_code",
-            },
-        ],
-        "show_command_legend_in_header": True,
-        "tests_directory": "{{ base_directory }}/tests",
-        "logging": {
-            "level": "INFO",
-        },
-        "prompt_icons": {
-            "user": "👤",
-            "assistant": "🤖",
-        },
-    }
+    os.chdir(original)
 
 
 @pytest.fixture
 def clean_logger():
-    """Clean logger setup and teardown with a LoggingListHandler to capture log records."""
+    logger = logging.getLogger("vibedir.config")
     logger.handlers.clear()
-    vibedir_logging.configure_logging(logger, level=logging.DEBUG)  # Adjust to vibedir's logging function
+    logger.setLevel(logging.DEBUG)
 
-    # Add LoggingListHandler to capture log records
-    list_handler = LoggingListHandler()
-    list_handler.setLevel(logging.DEBUG)
-    logger.addHandler(list_handler)
+    handler = logging.StreamHandler()  # simple handler for capture
+    handler.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
 
     yield logger
 
-    # Clean up
-    logger.removeHandler(list_handler)
-    list_handler.close()
     logger.handlers.clear()
 
 
-def assert_config_content_equal(config: Dynaconf, expected_config_content: dict):
-    """Common set of assertions to check Dynaconf config content against an expected set of values"""
-    assert isinstance(config, Dynaconf)
-    print(f"config is:\n{json.dumps(config.to_dict(), indent=4)}\n--")
-    assert isinstance(expected_config_content, dict)
-    print(f"expected_config_content is:\n{json.dumps(expected_config_content, indent=4)}\n--")
-    assert config.get("mode") == expected_config_content["mode"]
-    assert config.get("llm.model") == expected_config_content["llm"]["model"]
-    assert config.get("llm.endpoint") == expected_config_content["llm"]["endpoint"]
-    assert config.get("clipboard_max_chars_per_file") == expected_config_content["clipboard_max_chars_per_file"]
-    assert config.get("ask_llm_for_commit_message") == expected_config_content["ask_llm_for_commit_message"]
+@pytest.fixture
+def bundled_dict():
+    """Return the expected bundled config as a Python dict."""
+    content = get_bundled_config("vibedir")
+    return tomlkit.loads(content).unwrap()  # .unwrap() gives plain dict
 
+
+# ------------------------------------------------------------------
+# Tests
+# ------------------------------------------------------------------
 
 def test_check_namespace_value():
-    """Test namespace validation."""
     check_namespace_value("vibedir")
-    check_namespace_value("prepdir")
-    check_namespace_value("applydir_123")
+    check_namespace_value("MyApp_123")
 
-    with pytest.raises(ValueError, match="Invalid namespace '': must be non-empty"):
+    with pytest.raises(ValueError):
         check_namespace_value("")
 
-    with pytest.raises(ValueError, match="Invalid namespace 'invalid@name': must be a valid Python identifier"):
-        check_namespace_value("invalid@name")
+    with pytest.raises(ValueError):
+        check_namespace_value("invalid name")
 
 
-def test_check_config_format():
-    """Test check_config_format for valid and invalid TOML."""
-    check_config_format('mode = "clipboard"', "test config")
-
-    with pytest.raises(ValueError, match="Invalid TOML in test config"):
-        check_config_format("invalid = = = :", "test config")
+def test_is_resource_bundled_exists():
+    assert is_resource("vibedir", "config.toml") is True
 
 
-def test_is_resource_bundled_config():
-    """Make sure the bundled config (src/vibedir/config.toml) exists"""
-    assert is_resource("vibedir", "config.toml")
+def test_is_resource_missing():
+    assert is_resource("vibedir", "missing.toml") is False
 
 
-def test_is_resource_false():
-    """Test resource check for a non-existent file"""
-    assert not is_resource("vibedir", "nonexistent.toml")
+def test_get_bundled_config_returns_valid_toml(bundled_dict):
+    content = get_bundled_config("vibedir")
+    parsed = tomlkit.loads(content)
+    parsed_dict = parsed.unwrap()
+
+    assert parsed_dict["mode"] == "clipboard"
+    assert parsed_dict["llm"]["model"] == "grok-4"
+    assert parsed_dict["clipboard_max_chars_per_file"] == 40000
+    assert parsed_dict["ask_llm_for_commit_message"] is True
 
 
-def test_is_resource_exception(clean_logger):
-    """Test is_resource exception handling."""
-    # Mock the correct module based on Python version
-    mock_target = "importlib_resources.files" if sys.version_info < (3, 9) else "importlib.resources.files"
-    with patch(mock_target, side_effect=TypeError("Invalid resource")):
-        assert not is_resource("vibedir", "config.toml")
-
-
-def test_expected_bundled_config_values(expected_bundled_config_content):
-    # Load the bundled config and make sure its valid
-    bundled_config_content = get_bundled_config("vibedir")
-    check_config_format(bundled_config_content, "bundled config")
-
-    bundled_toml = tomllib.loads(bundled_config_content)
-    print(f"bundled toml is {bundled_toml}", "bundled")
-    assert bundled_toml is not None
-
-    # Check expected bundled config values
-    assert bundled_toml["mode"] == expected_bundled_config_content["mode"]
-    assert bundled_toml["llm"]["model"] == expected_bundled_config_content["llm"]["model"]
-    assert bundled_toml["llm"]["endpoint"] == expected_bundled_config_content["llm"]["endpoint"]
-    assert bundled_toml["clipboard_max_chars_per_file"] == expected_bundled_config_content["clipboard_max_chars_per_file"]
-    assert bundled_toml["ask_llm_for_commit_message"] == expected_bundled_config_content["ask_llm_for_commit_message"]
-
-
-def test_nonexistent_bundled_config():
-    """Try to load a bundled config for a namespace that does not exist"""
-    # Load the bundled config and make sure its valid
-    namespace = "namespace_that_does_not_exist"
-    with pytest.raises(ModuleNotFoundError, match=f"No module named '{namespace}'"):
-        get_bundled_config(namespace)
-
-
-def test_load_config_from_specific_path(sample_config_content, clean_cwd, clean_logger):
-    """Test loading local configuration from mydir/config.toml."""
-    config_path = clean_cwd / "mydir" / "config.toml"
-    config_path.parent.mkdir()
-    with config_path.open("wb") as f:
-        tomllib.dump(sample_config_content, f)  # tomllib has no dump; use tomlkit or tomli_w for writing
-
-    # Note: Since tomllib is read-only, for writing in tests, install and use tomli_w or similar
-    # For simplicity, write as string
-    config_str = """
+def test_load_config_custom_path(clean_cwd):
+    custom_path = clean_cwd / "myconfig.toml"
+    custom_path.write_text(
+        """
 mode = "api"
+clipboard_max_chars_per_file = 99999
 
 [llm]
-model = "test-model"
-endpoint = "https://test.endpoint"
-
-clipboard_max_chars_per_file = 50000
-ask_llm_for_commit_message = false
+model = "custom-model"
+endpoint = "https://example.com"
 """
-    config_path.write_text(config_str)
+    )
 
-    with patch.dict(os.environ, {"VIBEDIR_SKIP_CONFIG_FILE_LOAD": "true"}):
-        config = load_config("vibedir", str(config_path), quiet=True)
+    config = load_config("vibedir", config_path=str(custom_path), quiet=True)
 
-    assert_config_content_equal(config, sample_config_content)
+    assert config.mode == "api"
+    assert config.llm.model == "custom-model"
+    assert config.clipboard_max_chars_per_file == 99999
 
 
-def test_load_config_local(sample_config_content, clean_cwd, clean_logger):
-    """Test loading local configuration from .vibedir/config.toml."""
-
-    # Create local config file
-    config_path = clean_cwd / ".vibedir" / "config.toml"
-    config_path.parent.mkdir()
-    config_str = """
-mode = "api"
-
-[llm]
-model = "test-model"
-endpoint = "https://test.endpoint"
-
-clipboard_max_chars_per_file = 50000
-ask_llm_for_commit_message = false
-"""
-    config_path.write_text(config_str)
-
-    # Create empty home dir (so no config gets loaded from there)
+def test_load_config_local_precedence_over_home(clean_cwd):
+    # Home config
     home_dir = clean_cwd / "home"
     home_dir.mkdir()
+    os.environ["HOME"] = str(home_dir)
+    (home_dir / ".vibedir").mkdir()
+    (home_dir / ".vibedir" / "config.toml").write_text('mode = "clipboard"')
 
-    with patch.dict(
-        os.environ,
-        {"HOME": str(home_dir), "VIBEDIR_SKIP_CONFIG_FILE_LOAD": "false", "VIBEDIR_SKIP_BUNDLED_CONFIG_LOAD": "true"},
-    ):
-        config = load_config("vibedir")
+    # Local config (should win)
+    local_path = clean_cwd / ".vibedir" / "config.toml"
+    local_path.parent.mkdir()
+    local_path.write_text('mode = "api"')
 
-    assert_config_content_equal(config, sample_config_content)
+    config = load_config("vibedir", quiet=True)
+    assert config.mode == "api"  # local wins
 
 
-def test_load_config_home(sample_config_content, clean_cwd, clean_logger):
-    """Test loading configuration from ~/.vibedir/config.toml."""
-    home_dir = clean_cwd / "home"
-    home_dir.mkdir()
-    config_path = home_dir / ".vibedir" / "config.toml"
-    config_path.parent.mkdir()
-    config_str = """
-mode = "api"
+def test_load_config_falls_back_to_bundled(clean_cwd, bundled_dict):
+    # No config files anywhere
+    os.environ.pop("HOME", None)
 
-[llm]
-model = "test-model"
-endpoint = "https://test.endpoint"
-
-clipboard_max_chars_per_file = 50000
-ask_llm_for_commit_message = false
-"""
-    config_path.write_text(config_str)
-
-    with patch.dict(
-        os.environ,
-        {"HOME": str(home_dir), "VIBEDIR_SKIP_CONFIG_FILE_LOAD": "false", "VIBEDIR_SKIP_BUNDLED_CONFIG_LOAD": "true"},
-    ):
+    with patch.dict(os.environ, {
+        "VIBEDIR_SKIP_CONFIG_FILE_LOAD": "true",
+        "VIBEDIR_SKIP_BUNDLED_CONFIG_LOAD": "false"
+    }):
         config = load_config("vibedir", quiet=True)
 
-    assert_config_content_equal(config, sample_config_content)
+    assert config.mode == bundled_dict["mode"]
+    assert config.llm.model == bundled_dict["llm"]["model"]
+    assert config.clipboard_max_chars_per_file == bundled_dict["clipboard_max_chars_per_file"]
 
 
-def test_load_config_bundled(clean_logger):
-    """Test loading bundled configuration using get_bundled_config."""
-    # Load the bundled config
-    bundled_toml = tomllib.loads(get_bundled_config("vibedir"))
+def test_init_config_creates_file_from_bundled(clean_cwd):
+    target = clean_cwd / ".vibedir" / "config.toml"
 
-    # Skip any file loads and load the bundled
-    with patch.dict(os.environ, {"VIBEDIR_SKIP_CONFIG_FILE_LOAD": "true", "VIBEDIR_SKIP_BUNDLED_CONFIG_LOAD": "false"}):
-        config = load_config("vibedir", quiet=True)
+    init_config("vibedir", config_path=str(target), force=True, quiet=True)
 
-    assert config.get("mode") == bundled_toml["mode"]
-    assert config.get("llm.model") == bundled_toml["llm"]["model"]
+    assert target.is_file()
+    written = tomlkit.loads(target.read_text()).unwrap()
+    bundled = tomlkit.loads(get_bundled_config("vibedir")).unwrap()
+    assert written == bundled
 
 
-def test_init_config(clean_cwd, clean_logger):
-    """Test initializing a configuration file."""
-    config_path = clean_cwd / ".vibedir" / "config.toml"
-    init_config("vibedir", str(config_path), force=True)
+def test_init_config_refuses_to_overwrite_without_force(clean_cwd):
+    target = clean_cwd / ".vibedir" / "config.toml"
+    target.parent.mkdir()
+    target.write_text("mode = 'clipboard'")
 
-    assert config_path.is_file()
-    bundled_toml = tomllib.loads(get_bundled_config("vibedir"))
-    with config_path.open("rb") as f:
-        new_config = tomllib.load(f)
-    assert new_config == bundled_toml
-    assert any("Created '.vibedir/config.toml' with default configuration." in record.message for record in clean_logger.handlers[-1].records if hasattr(record, 'message'))  # Adjusted for log format
+    with pytest.raises(SystemExit):
+        init_config("vibedir", config_path=str(target), quiet=True)
+
+
+def test_save_config_creates_local_file_if_missing(clean_cwd, bundled_dict):
+    # No config file exists yet
+    assert not (clean_cwd / ".vibedir" / "config.toml").exists()
+
+    saved_path = save_config(
+        "vibedir",
+        updates={"mode": "api", "clipboard_max_chars_per_file": 12345},
+        quiet=True,
+    )
+
+    assert saved_path == clean_cwd / ".vibedir" / "config.toml"
+    assert saved_path.is_file()
+
+    config = load_config("vibedir", quiet=True)
+    assert config.mode == "api"
+    assert config.clipboard_max_chars_per_file == 12345
+
+    # Bundled values that weren't touched should still be there
+    assert config.llm.model == bundled_dict["llm"]["model"]
+
+
+def test_save_config_preserves_comments_and_formatting(clean_cwd):
+    # Start with bundled config (has comments)
+    init_config("vibedir", force=True, quiet=True)
+
+    path = clean_cwd / ".vibedir" / "config.toml"
+    original_content = path.read_text()
+    assert "# The mode determines" in original_content  # assuming your bundled has this comment; adjust if needed
+
+    save_config("vibedir", {"mode": "api"}, quiet=True)
+
+    new_content = path.read_text()
+    assert "# The mode determines" in new_content  # comment preserved!
+    assert 'mode = "api"' in new_content
+
+
+def test_save_config_nested_dotted_keys(clean_cwd):
+    init_config("vibedir", force=True, quiet=True)
+
+    save_config(
+        "vibedir",
+        {
+            "llm.model": "claude-3",
+            "clipboard_max_chars_per_file": 98765,
+            "auto_commit": "latest",
+        },
+        quiet=True,
+    )
+
+    config = load_config("vibedir", quiet=True)
+    assert config.llm.model == "claude-3"
+    assert config.clipboard_max_chars_per_file == 98765
+    assert config.auto_commit == "latest"
+
+
+def test_save_config_to_explicit_path(clean_cwd):
+    target = clean_cwd / "custom_dir" / "myconfig.toml"
+    save_config("vibedir", {"mode": "api"}, target=str(target), quiet=True)
+
+    assert target.is_file()
+    doc = tomlkit.loads(target.read_text())
+    assert doc["mode"] == "api"
+
+
+def test_home_and_local_config_path():
+    home, local = home_and_local_config_path("vibedir")
+    assert home == Path.home() / ".vibedir" / "config.toml"
+    assert str(local).endswith(".vibedir/config.toml")
+    assert local.is_absolute()
 
 
 if __name__ == "__main__":

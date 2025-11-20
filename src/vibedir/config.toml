@@ -9,13 +9,6 @@
 # Note LLM tag must be defined to use API mode.
 mode = "clipboard"  # [clipboard|api] if api then llm tag must be defined
 
-[llm]
-# If using API mode, the following LLM information must be defined
-# (this will be fleshed out as apibump is developed)
-# The plan is to require an LLM key and an apibump key to be defined in .netrc/other
-model = "grok-4"
-endpoint = "https://api.x.ai/v1"
-
 # If using CLIPBOARD mode, set the max number of characters per file
 # (to work around LLM UI file truncation)
 clipboard_max_chars_per_file = 40000
@@ -38,7 +31,7 @@ show_previous_commit_message = true  # [true|false] show the previous commit mes
 #           code changes from the LLM (via applydir)
 #   off: do not automatically perform commits
 auto_commit = "previous"  # [previous|latest|off]
-commit_command = "git commit -a -m \"{{ commit_message }}\""  # commit_message will be filled with the working commit message
+commit_command = 'git commit -a -m "{{ commit_message }}" '  # commit_message will be filled with the working commit message
 revert_changes_command = "git checkout -- . && git reset"
 last_commit_message_command = "git log -1 --pretty=%B"
 changes_exist_command = "git diff --quiet HEAD"
@@ -49,6 +42,19 @@ changes_exist_result = "exit_code"
 # is successfully applied to the code base.
 auto_diff = false  # [true|false]
 diff_command = "git diff"
+
+# Show legend in the header
+show_command_legend_in_header = true  # [true|false]
+
+# Default tests directory (used in Tests command above)
+tests_directory = '{{ base_directory }}/tests'
+
+[llm]
+# If using API mode, the following LLM information must be defined
+# (this will be fleshed out as apibump is developed)
+# The plan is to require an LLM key and an apibump key to be defined in .netrc/other
+model = "grok-4"
+endpoint = "https://api.x.ai/v1"
 
 # ------------------------------------------------------------------
 # STATUS_ICONS – you can override any of the five status symbols here
@@ -94,14 +100,14 @@ command = "apply_code_changes" # special command to apply code changes from appl
 [[command]]
 name = "Format Code"
 run_on = ["changes_success"]
-command = "ruff format {{ base_directory }}"
+command = 'ruff format {{ base_directory }}'
 
 [[command]]
 name = "Lint"
 show_in_header = true
 run_on = ["changes_success"]
 include_results = true
-command = "ruff check {{ base_directory }}"
+command = 'ruff check {{ base_directory }}'
 success = "exit_code"
 
 [[command]]
@@ -110,14 +116,8 @@ hotkey = 't'
 show_in_header = true
 run_on = ["changes_success"]
 include_results = true
-command = "pytest {{ tests_directory }}"
+command = 'pytest {{ tests_directory }}'
 success = "exit_code"
-
-# Show legend in the header
-show_command_legend_in_header = true  # [true|false]
-
-# Default tests directory (used in Tests command above)
-tests_directory = "{{ base_directory }}/tests"
 
 # Choose a standard level for logging 
 [logging]

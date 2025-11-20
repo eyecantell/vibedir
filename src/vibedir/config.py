@@ -19,6 +19,7 @@ except Exception as e:
     logging.getLogger(__name__).debug(f"Failed to load package version: {e}")
 
 logger = logging.getLogger(__name__)
+logging.getLogger("vibedir").setLevel(logging.DEBUG)
 
 
 def check_namespace_value(namespace: str) -> None:
@@ -50,6 +51,7 @@ def get_bundled_config(namespace: str) -> str:
     if not is_resource(namespace, "config.toml"):
         raise ValueError(f"No bundled config.toml found in package '{namespace}'")
     path = resources.files(namespace) / "config.toml"
+    print(f"Loading bundled config from {path}")
     return path.read_text(encoding="utf-8")
 
 
@@ -66,13 +68,6 @@ def load_config(
     config_path: Optional[str] = None,
     quiet: bool = False,
 ) -> Dynaconf:
-    """
-    Load configuration with precedence:
-        1. custom path (if given)
-        2. local .vibedir/config.toml
-        3. home ~/.vibedir/config.toml
-        4. bundled default config.toml
-    """
     check_namespace_value(namespace)
     settings_files: list[Path] = []
 
@@ -90,7 +85,6 @@ def load_config(
 
     elif not skip_file_load:
         home_path, local_path = home_and_local_config_path(namespace)
-
         for p in (home_path, local_path):
             if p.is_file():
                 settings_files.append(p)
@@ -98,8 +92,8 @@ def load_config(
                 if not quiet:
                     print(f"Found config: {p}")
 
-    # Fallback to bundled config via temporary file (Dynaconf only reads files)
-    temp_path: Optional[str] = None
+    # ---- Bundled fallback -------------------------------------------------
+    temp_path: Optional[Path] = None
     if not settings_files and not skip_bundled:
         try:
             content = get_bundled_config(namespace)
@@ -108,8 +102,9 @@ def load_config(
             )
             tmp.write(content)
             tmp.close()
-            temp_path = tmp.name
-            settings_files.append(Path(temp_path))
+            temp_path = Path(tmp.name)
+            settings_files.append(temp_path)
+
             logger.info("Using bundled default config")
             if not quiet:
                 print("Using bundled default config")
@@ -119,18 +114,25 @@ def load_config(
     if not settings_files:
         logger.debug("No config files found – Dynaconf will use empty defaults")
 
-    try:
-        settings = Dynaconf(
-            settings_files=[str(p) for p in settings_files],
-            merge_enabled=True,
-            load_dotenv=False,
-        )
-    finally:
-        if temp_path and Path(temp_path).exists():
-            try:
-                Path(temp_path).unlink()
-            except Exception as exc:
-                logger.warning(f"Failed to remove temporary bundled config {temp_path}: {exc}")
+    # Dynaconf creation
+    settings = Dynaconf(
+        settings_files=[str(p) for p in settings_files],
+        merge_enabled=True,
+        load_dotenv=False,
+        uppercase_read_for_dynaconf=False,
+    )
+
+    # Force eager loading before we delete the temp file
+    if temp_path:
+        settings.to_dict()  # <-- this line fixes the crash
+
+    # Cleanup temp file (now safe)
+    if temp_path and temp_path.exists():
+        try:
+            temp_path.unlink()
+            logger.debug(f"Cleaned up temporary bundled config {temp_path}")
+        except Exception as exc:
+            logger.warning(f"Failed to remove temp config {temp_path}: {exc}")
 
     return settings
 
