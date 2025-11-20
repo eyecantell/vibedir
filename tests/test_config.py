@@ -329,11 +329,11 @@ run_on = ["changes_success"]
     config = load_config("vibedir", quiet=True)
 
     commands = config.command
-    assert len(commands) == 6                     # 4 bundled + 1 home + 1 local
+    assert len(commands) == 5                     # 3 bundled + 1 home + 1 local
 
     names = {cmd["name"] for cmd in commands}
     assert names == {
-        "Code Changes", "Format Code", "Lint", "Tests", "Custom Build", "Deploy"
+        "Format Code", "Lint", "Tests", "Custom Build", "Deploy"
     }
 
 
@@ -374,8 +374,8 @@ run_on = ["startup"]
     # Home command must appear before local command → proves correct merge order
     assert home_idx < local_idx
 
-    # Bonus: bundled "Code Changes" should be first
-    assert names[0] == "Code Changes"
+    # Bonus: bundled "Format Code" should be first
+    assert names[0] == "Format Code"
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

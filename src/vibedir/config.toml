@@ -1,8 +1,3 @@
-# config.toml
-# Note this file holds user default settings. If config changes are made during a session,
-# those are automatically reloaded on the next session. To prevent this load,
-# remove or rename .vibedir/config.json
-
 # The mode determines how vibedir is used:
 # clipboard: prompts are shared with an LLM via copy/paste
 # api: interactions with an LLM are handled via API. 
@@ -91,11 +86,6 @@ running        = "spinner"
 # - no_manual         → do not create manual run option in menu for this command. Default is to create manual run option.
 # - prompt_send       → before sending prompt to LLM (will be on prompt copy is clipboard mode)
 # - prompt_receive    → after LLM response received (API mode only)
-
-[[command]]  # Does it make sense to define this here or should we handle it specially in code?
-name = "Code Changes"
-run_on = ["changes_received"]
-command = "apply_code_changes" # special command to apply code changes from applydir.json
 
 [[command]]
 name = "Format Code"
