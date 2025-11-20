@@ -19,7 +19,6 @@ except Exception as e:
     logging.getLogger(__name__).debug(f"Failed to load package version: {e}")
 
 logger = logging.getLogger(__name__)
-logging.getLogger("vibedir").setLevel(logging.DEBUG)
 
 
 def check_namespace_value(namespace: str) -> None:
@@ -51,7 +50,6 @@ def get_bundled_config(namespace: str) -> str:
     if not is_resource(namespace, "config.toml"):
         raise ValueError(f"No bundled config.toml found in package '{namespace}'")
     path = resources.files(namespace) / "config.toml"
-    print(f"Loading bundled config from {path}")
     return path.read_text(encoding="utf-8")
 
 
@@ -68,33 +66,20 @@ def load_config(
     config_path: Optional[str] = None,
     quiet: bool = False,
 ) -> Dynaconf:
+    """
+    Load configuration with precedence: custom > local > home > bundled.
+    Merges all available sources (bundled always as base unless skipped).
+    """
     check_namespace_value(namespace)
     settings_files: list[Path] = []
 
     skip_file_load = os.environ.get("VIBEDIR_SKIP_CONFIG_FILE_LOAD", "false").lower() == "true"
     skip_bundled = os.environ.get("VIBEDIR_SKIP_BUNDLED_CONFIG_LOAD", "false").lower() == "true"
 
-    if config_path:
-        cfg_path = Path(config_path).resolve()
-        if not cfg_path.is_file():
-            raise ValueError(f"Custom config path does not exist: {cfg_path}")
-        settings_files.append(cfg_path)
-        logger.info(f"Using custom config: {cfg_path}")
-        if not quiet:
-            print(f"Using custom config: {cfg_path}")
-
-    elif not skip_file_load:
-        home_path, local_path = home_and_local_config_path(namespace)
-        for p in (home_path, local_path):
-            if p.is_file():
-                settings_files.append(p)
-                logger.info(f"Found config: {p}")
-                if not quiet:
-                    print(f"Found config: {p}")
-
-    # ---- Bundled fallback -------------------------------------------------
     temp_path: Optional[Path] = None
-    if not settings_files and not skip_bundled:
+
+    # Bundled as base (lowest precedence)
+    if not skip_bundled:
         try:
             content = get_bundled_config(namespace)
             tmp = tempfile.NamedTemporaryFile(
@@ -104,29 +89,51 @@ def load_config(
             tmp.close()
             temp_path = Path(tmp.name)
             settings_files.append(temp_path)
-
-            logger.info("Using bundled default config")
             if not quiet:
-                print("Using bundled default config")
+                print("Using bundled default config (as base)")
         except Exception as exc:
             logger.warning(f"Could not load bundled config: {exc}")
+
+    # Home then local (increasing precedence)
+    if not skip_file_load:
+        home_path, local_path = home_and_local_config_path(namespace)
+        if home_path.is_file():
+            settings_files.append(home_path)
+            logger.info(f"Found home config: {home_path}")
+            if not quiet:
+                print(f"Found home config: {home_path}")
+        if local_path.is_file():
+            settings_files.append(local_path)
+            logger.info(f"Found local config: {local_path}")
+            if not quiet:
+                print(f"Found local config: {local_path}")
+
+    # Custom (highest precedence)
+    if config_path:
+        cfg_path = Path(config_path).resolve()
+        if not cfg_path.is_file():
+            raise ValueError(f"Custom config path does not exist: {cfg_path}")
+        settings_files.append(cfg_path)
+        logger.info(f"Using custom config: {cfg_path}")
+        if not quiet:
+            print(f"Using custom config: {cfg_path}")
 
     if not settings_files:
         logger.debug("No config files found – Dynaconf will use empty defaults")
 
-    # Dynaconf creation
+    # Create Dynaconf with merge (later files override earlier)
     settings = Dynaconf(
         settings_files=[str(p) for p in settings_files],
         merge_enabled=True,
         load_dotenv=False,
-        uppercase_read_for_dynaconf=False,
+        lowercase_read_for_dynaconf=True,
     )
 
-    # Force eager loading before we delete the temp file
+    # Force eager loading before cleanup
     if temp_path:
-        settings.to_dict()  # <-- this line fixes the crash
+        settings.to_dict()
 
-    # Cleanup temp file (now safe)
+    # Cleanup temp bundled file
     if temp_path and temp_path.exists():
         try:
             temp_path.unlink()
