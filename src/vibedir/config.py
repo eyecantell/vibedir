@@ -1,11 +1,13 @@
+# vibedir/config.py
 import logging
 import os
 import tempfile
-import tomllib  # Built-in for Python 3.11+; use 'pip install tomli' for older versions
-from dynaconf import Dynaconf
-from importlib import resources
 from pathlib import Path
 from typing import Optional, Tuple
+
+import tomlkit  # pip install tomlkit
+from dynaconf import Dynaconf
+from importlib import resources
 
 __version__ = "0.0.0"
 
@@ -20,14 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def check_namespace_value(namespace: str) -> None:
-    """Validate the namespace value to ensure it's a valid Python identifier.
-
-    Args:
-        namespace (str): The namespace to validate.
-
-    Raises:
-        ValueError: If the namespace is empty or not a valid Python identifier.
-    """
+    """Validate that the namespace is a valid Python identifier."""
     if not namespace:
         raise ValueError("Invalid namespace '': must be non-empty")
     if not namespace.isidentifier():
@@ -35,229 +30,197 @@ def check_namespace_value(namespace: str) -> None:
 
 
 def is_resource(namespace: str, resource_name: str) -> bool:
-    """Check if a resource exists in the given namespace.
-
-    Args:
-        namespace (str): The namespace to check (e.g., 'vibedir').
-        resource_name (str): The name of the resource to check (e.g., 'config.toml').
-
-    Returns:
-        bool: True if the resource exists, False otherwise.
-    """
+    """Check if a resource (e.g. bundled config.toml) exists in the package."""
     try:
-        resource_path = resources.files(namespace) / resource_name
-        return resource_path.is_file()
+        return resources.files(namespace).joinpath(resource_name).is_file()
     except (TypeError, FileNotFoundError, AttributeError):
         return False
 
 
-def check_config_format(content: str, config_name: str) -> None:
-    """Validate that the given content is valid TOML.
-
-    Args:
-        content (str): The TOML content to validate.
-        config_name (str): The name or path of the config file for error reporting.
-
-    Raises:
-        ValueError: If the content is not valid TOML.
-    """
-    try:
-        tomllib.loads(content)
-    except tomllib.TOMLDecodeError as e:
-        logger.error(f"Invalid TOML in {config_name}: {e}", exc_info=True)
-        raise ValueError(f"Invalid TOML in {config_name}: {e}")
-
-
 def home_and_local_config_path(namespace: str) -> Tuple[Path, Path]:
-    """Return paths for home and local configuration files.
-
-    Args:
-        namespace (str): The namespace for the configuration (e.g., 'vibedir').
-
-    Returns:
-        Tuple[Path, Path]: Paths to home (~/.{namespace}/config.toml) and local (./.{namespace}/config.toml) config files.
-    """
+    """Return the expected home and local config file paths."""
     check_namespace_value(namespace)
-    home_config_path = Path.home() / f".{namespace}" / "config.toml"
-    local_config_path = Path(f".{namespace}") / "config.toml"
-    return (home_config_path, local_config_path)
+    home_path = Path.home() / f".{namespace}" / "config.toml"
+    local_path = Path.cwd() / f".{namespace}" / "config.toml"
+    return home_path, local_path
 
 
 def get_bundled_config(namespace: str) -> str:
-    """Retrieve and validate the bundled configuration content.
-
-    Args:
-        namespace (str): The namespace for the configuration (e.g., 'vibedir').
-
-    Returns:
-        str: The content of the bundled config.toml file.
-
-    Raises:
-        ValueError: If the bundled config does not exist or contains invalid TOML.
-    """
-    logger.debug(f"Checking is_resource({namespace}, config.toml)")
+    """Read the bundled default config.toml from the package."""
     if not is_resource(namespace, "config.toml"):
-        logger.error(f"No bundled config found for {namespace}", exc_info=True)
-        raise ValueError(f"No bundled config found for {namespace}")
-    try:
-        with resources.files(namespace).joinpath("config.toml").open("r", encoding="utf-8") as f:
-            config_content = f.read()
-        check_config_format(config_content, f"bundled config for '{namespace}'")
-        return config_content
-    except Exception as e:
-        logger.error(f"Failed to load bundled config for {namespace}: {e}", exc_info=True)
-        raise ValueError(f"Failed to load bundled config for {namespace}: {e}")
+        raise ValueError(f"No bundled config.toml found in package '{namespace}'")
+    path = resources.files(namespace) / "config.toml"
+    return path.read_text(encoding="utf-8")
 
 
-def load_config(namespace: str, config_path: Optional[str] = None, quiet: bool = False) -> Dynaconf:
-    """Load configuration with precedence: custom > local > home > bundled.
+def _load_toml_file(path: Path) -> tomlkit.TOMLDocument:
+    """Safely load a TOML file with tomlkit (preserves formatting/comments)."""
+    if not path.is_file():
+        raise FileNotFoundError(f"Config file not found: {path}")
+    with path.open("r", encoding="utf-8") as f:
+        return tomlkit.load(f)
 
-    Args:
-        namespace (str): The namespace for the configuration (e.g., 'vibedir').
-        config_path (Optional[str]): Path to a custom configuration file. If provided, only this file is used.
-        quiet (bool): If True, suppresses console output. Defaults to False.
 
-    Returns:
-        Dynaconf: A Dynaconf instance with the loaded configuration.
-
-    Raises:
-        ValueError: If the config path doesn't exist or contains invalid TOML.
-
-    Environment Variables:
-        VIBEDIR_SKIP_CONFIG_FILE_LOAD: If set to "true", skips loading of home (~/.{namespace}/config.toml)
-            and local (./.{namespace}/config.toml) configuration files. Defaults to "false".
-        VIBEDIR_SKIP_BUNDLED_CONFIG_LOAD: If set to "true", skips loading of the bundled configuration
-            file (packaged with the application). Defaults to "false".
+def load_config(
+    namespace: str,
+    config_path: Optional[str] = None,
+    quiet: bool = False,
+) -> Dynaconf:
+    """
+    Load configuration with precedence:
+        1. custom path (if given)
+        2. local .vibedir/config.toml
+        3. home ~/.vibedir/config.toml
+        4. bundled default config.toml
     """
     check_namespace_value(namespace)
-    settings_files = []
-    logger.debug(f"Loading config with namespace='{namespace}', config_path='{config_path}', quiet={quiet}")
+    settings_files: list[Path] = []
 
-    skip_config_file_load = os.environ.get("VIBEDIR_SKIP_CONFIG_FILE_LOAD", "false").lower() == "true"
-    skip_bundled_config = os.environ.get("VIBEDIR_SKIP_BUNDLED_CONFIG_LOAD", "false").lower() == "true"
+    skip_file_load = os.environ.get("VIBEDIR_SKIP_CONFIG_FILE_LOAD", "false").lower() == "true"
+    skip_bundled = os.environ.get("VIBEDIR_SKIP_BUNDLED_CONFIG_LOAD", "false").lower() == "true"
 
     if config_path:
-        config_path_obj = Path(config_path)
-        if not config_path_obj.is_file():
-            logger.error(f"Custom config path '{config_path_obj.resolve()}' does not exist", exc_info=True)
-            raise ValueError(f"Custom config path '{config_path_obj.resolve()}' does not exist")
-        with config_path_obj.open("r", encoding="utf-8") as f:
-            content = f.read()
-        check_config_format(content, f"custom config '{config_path_obj}'")
-        settings_files.append(config_path_obj.resolve())
-        logger.info(f"Using custom config path: {config_path_obj.resolve()}")
+        cfg_path = Path(config_path).resolve()
+        if not cfg_path.is_file():
+            raise ValueError(f"Custom config path does not exist: {cfg_path}")
+        settings_files.append(cfg_path)
+        logger.info(f"Using custom config: {cfg_path}")
         if not quiet:
-            print(f"Using custom config path: {config_path_obj.resolve()}")
+            print(f"Using custom config: {cfg_path}")
 
-    elif not skip_config_file_load:
-        home_config_path, local_config_path = home_and_local_config_path(namespace)
+    elif not skip_file_load:
+        home_path, local_path = home_and_local_config_path(namespace)
 
-        if home_config_path.is_file():
-            with home_config_path.open("r", encoding="utf-8") as f:
-                content = f.read()
-            check_config_format(content, f"home config '{home_config_path}'")
-            settings_files.append(home_config_path.resolve())
-            logger.info(f"Found home config: {home_config_path.resolve()}")
-            if not quiet:
-                print(f"Found home config: {home_config_path.resolve()}")
-        else:
-            logger.debug(f"No home config found at: {home_config_path.resolve()}")
+        for p in (home_path, local_path):
+            if p.is_file():
+                settings_files.append(p)
+                logger.info(f"Found config: {p}")
+                if not quiet:
+                    print(f"Found config: {p}")
 
-        if local_config_path.is_file():
-            with local_config_path.open("r", encoding="utf-8") as f:
-                content = f.read()
-            check_config_format(content, f"local config '{local_config_path}'")
-            settings_files.append(local_config_path.resolve())
-            logger.info(f"Found local config: {local_config_path.resolve()}")
-            if not quiet:
-                print(f"Found local config: {local_config_path.resolve()}")
-        else:
-            logger.debug(f"No local config found at: {local_config_path.resolve()}")
-
-    temp_path = None
-    if not settings_files and not skip_bundled_config:
+    # Fallback to bundled config via temporary file (Dynaconf only reads files)
+    temp_path: Optional[str] = None
+    if not settings_files and not skip_bundled:
         try:
-            config_content = get_bundled_config(namespace)
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=f"_{namespace}_bundled_config.toml", delete=False
-            ) as temp:
-                temp.write(config_content)
-                temp_path = temp.name
-            settings_files.append(Path(temp_path).resolve())
-            logger.info("Will use default (bundled) config")
+            content = get_bundled_config(namespace)
+            tmp = tempfile.NamedTemporaryFile(
+                mode="w", suffix=f"_{namespace}_bundled.toml", delete=False, encoding="utf-8"
+            )
+            tmp.write(content)
+            tmp.close()
+            temp_path = tmp.name
+            settings_files.append(Path(temp_path))
+            logger.info("Using bundled default config")
             if not quiet:
-                print("Will use default (bundled) config")
-            logger.debug(f"Loaded bundled config into temporary file: {temp_path}")
-        except ValueError as e:
-            logger.warning(f"No bundled config available for {namespace}: {e}")
+                print("Using bundled default config")
+        except Exception as exc:
+            logger.warning(f"Could not load bundled config: {exc}")
 
     if not settings_files:
-        logger.debug(f"No custom, home, local, or bundled config files found for {namespace}, using defaults")
+        logger.debug("No config files found – Dynaconf will use empty defaults")
 
     try:
-        logger.debug(f"Initializing Dynaconf with settings files: {settings_files}")
-
         settings = Dynaconf(
-            settings_files=settings_files,
+            settings_files=[str(p) for p in settings_files],
             merge_enabled=True,
             load_dotenv=False,
-            default_settings_paths=[],
         )
-        logger.debug(f"Loaded config for {namespace} from: {settings_files}")
-
     finally:
-        # If a bundled config was used, remove the temporary file
-        if temp_path and Path(temp_path).is_file():
+        if temp_path and Path(temp_path).exists():
             try:
-                settings.to_dict()  # Force the actual config load before the file is removed
                 Path(temp_path).unlink()
-                logger.debug(f"Removed temporary bundled config: {temp_path}")
-            except Exception as e:
-                logger.warning(f"Failed to remove temporary bundled config {temp_path}: {e}", exc_info=True)
+            except Exception as exc:
+                logger.warning(f"Failed to remove temporary bundled config {temp_path}: {exc}")
 
     return settings
 
 
-def init_config(namespace: str, config_path: str = "", force: bool = False, quiet: bool = False) -> None:
-    """Initialize a configuration file at the specified path.
+def save_config(
+    namespace: str,
+    updates: dict,
+    target: Optional[str] = None,
+    quiet: bool = False,
+) -> Path:
+    """
+    Persist configuration changes back to a TOML file using tomlkit.
+    By default writes to the **local** .vibedir/config.toml (creates if missing).
 
     Args:
-        namespace (str): The namespace for the configuration (e.g., 'vibedir').
-        config_path (str): Path where the configuration file will be created. If empty, defaults to ./{namespace}/config.toml in the current directory.
-        force (bool): If True, overwrite the config file if it exists. Defaults to False.
-        quiet (bool): If True, suppresses console output. Defaults to False.
+        namespace: Usually "vibedir"
+        updates: dict of changes, supports dotted keys (e.g. {"llm.model": "grok-4"})
+        target: Optional explicit path; if None → local config
+        quiet: Suppress console output
 
-    Raises:
-        SystemExit: If the config file exists and force=False, or if the bundled config cannot be loaded,
-                    or if the config file cannot be created.
+    Returns:
+        Path to the file that was written
     """
     check_namespace_value(namespace)
-    
-    if not config_path:
-        # Use default local config path for this namespace
-        _, config_path_obj = home_and_local_config_path(namespace)
-    else:
-        config_path_obj = Path(config_path)
 
-    if config_path_obj.exists() and not force:
-        msg = f"Config file '{config_path_obj}' already exists. Use force=True to overwrite"
+    if target:
+        config_path = Path(target).expanduser().resolve()
+    else:
+        _, config_path = home_and_local_config_path(namespace)
+
+    # Ensure parent directory exists
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # If file doesn't exist, start from bundled defaults
+    if not config_path.is_file():
+        content = get_bundled_config(namespace)
+        doc = tomlkit.loads(content)
+        if not quiet:
+            print(f"Created new config file: {config_path}")
+    else:
+        doc = _load_toml_file(config_path)
+
+    # Apply updates (supports nested dotted notation)
+    for key_path, value in updates.items():
+        parts = key_path.split(".")
+        current = doc
+        for part in parts[:-1]:
+            if part not in current or not isinstance(current[part], tomlkit.container.Container):
+                current[part] = tomlkit.table()
+            current = current[part]
+        current[parts[-1]] = value
+
+    # Write back with nice formatting
+    with config_path.open("w", encoding="utf-8") as f:
+        tomlkit.dump(doc, f)
+
+    logger.info(f"Config saved to {config_path}")
+    if not quiet:
+        print(f"Config saved → {config_path}")
+
+    return config_path
+
+
+def init_config(
+    namespace: str,
+    config_path: str = "",
+    force: bool = False,
+    quiet: bool = False,
+) -> None:
+    """
+    Create a fresh config file from the bundled default.
+    """
+    check_namespace_value(namespace)
+
+    if not config_path:
+        _, default_path = home_and_local_config_path(namespace)
+    else:
+        default_path = Path(config_path)
+
+    if default_path.exists() and not force:
+        msg = f"Config file already exists: {default_path}\nUse --force to overwrite."
         logger.error(msg)
         if not quiet:
             print(msg)
-        raise SystemExit(msg)
+        raise SystemExit(1)
 
-    try:
-        config_content = get_bundled_config(namespace)
-    except Exception as e:
-        logger.error(f"Failed to initialize config: {e}", exc_info=True)
-        raise SystemExit(f"Error: Failed to initialize config: {e}")
+    content = get_bundled_config(namespace)
+    default_path.parent.mkdir(parents=True, exist_ok=True)
+    default_path.write_text(content, encoding="utf-8")
 
-    try:
-        config_path_obj.parent.mkdir(parents=True, exist_ok=True)
-        config_path_obj.write_text(config_content, encoding="utf-8")
-        logger.info(f"Created '{config_path_obj}' with default configuration.")
-        if not quiet:
-            print(f"Created '{config_path_obj}' with default configuration.")
-    except Exception as e:
-        logger.error(f"Failed to create config file '{config_path_obj}': {e}", exc_info=True)
-        raise SystemExit(f"Error: Failed to create config file '{config_path_obj}': {e}")
+    logger.info(f"Initialized config at {default_path}")
+    if not quiet:
+        print(f"Initialized config → {default_path}")

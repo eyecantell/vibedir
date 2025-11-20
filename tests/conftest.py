@@ -1,9 +1,8 @@
 import pytest
 import logging
 import os
-from pathlib import Path
 from datetime import datetime
-from vibedir.config import __version__  # Adjust to vibedir's version
+from vibedir import __version__  # Adjust to vibedir's version
 
 @pytest.fixture(autouse=True)
 def reset_loggers():

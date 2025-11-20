@@ -8,10 +8,10 @@ from textual.widget import Widget
 from textual.app import ComposeResult
 from textual.scroll_view import ScrollView
 import time  # For debounce
-import toml  # Import toml to load config
+from .config import load_config
 
 # Load config
-CONFIG = toml.load("config.toml")
+CONFIG = load_config("vibedir", config_path=None, quiet=True)
 USER_ICON = CONFIG["prompt_icons"]["user"]
 ASSISTANT_ICON = CONFIG["prompt_icons"]["assistant"]
 

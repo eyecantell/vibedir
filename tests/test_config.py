@@ -8,12 +8,12 @@ from unittest.mock import patch, MagicMock
 from pathlib import Path
 from dynaconf import Dynaconf
 from vibedir.config import (
-    load_config,
-    check_namespace_value,
-    init_config,
     check_config_format,
+    check_namespace_value,
     get_bundled_config,
+    init_config,
     is_resource,
+    load_config,
 )
 from vibedir import vibedir_logging  # Assuming vibedir has a similar logging module; adjust if needed
 import sys

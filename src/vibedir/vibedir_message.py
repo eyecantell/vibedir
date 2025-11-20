@@ -2,10 +2,10 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
-import toml  # Import toml to load config
+from .config import load_config
 
 # Load config
-CONFIG = toml.load("config.toml")
+CONFIG = load_config("vibedir", config_path=None, quiet=True)
 USER_ICON = CONFIG["prompt_icons"]["user"]
 ASSISTANT_ICON = CONFIG["prompt_icons"]["assistant"]
 
