@@ -45,11 +45,9 @@ show_command_legend_in_header = true  # [true|false]
 tests_directory = '{{ base_directory }}/tests'
 
 [llm]
-# If using API mode, the following LLM information must be defined
-# (this will be fleshed out as apibump is developed)
-# The plan is to require an LLM key and an apibump key to be defined in .netrc/other
+# Default model to use (e.g. "grok-4", "gpt-4o", "claude-3-5-sonnet-20240620") when in API mode.
+# LiteLLM auto-detects the provider and endpoint from the model name.
 model = "grok-4"
-endpoint = "https://api.x.ai/v1"
 
 # ------------------------------------------------------------------
 # STATUS_ICONS – you can override any of the five status symbols here
