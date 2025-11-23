@@ -7,6 +7,7 @@ mode = "clipboard"  # [clipboard|api] if api then llm tag must be defined
 # If using CLIPBOARD mode, set the max number of characters per file
 # (to work around LLM UI file truncation)
 clipboard_max_chars_per_file = 40000
+clipboard_max_file_count = 5  # max number of files to include in clipboard prompt
 
 # ===================================================================
 # Source Control (e.g. git) & COMMITS
@@ -86,7 +87,7 @@ running        = "spinner"
 # - prompt_receive    → after LLM response received (API mode only)
 
 [[command]]
-name = "Format Code"
+name = "Format"
 run_on = ["changes_success"]
 command = 'ruff format {{ base_directory }}'
 

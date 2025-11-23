@@ -22,83 +22,72 @@ VibeDir is a utility to facilitate code modifications when using an AI assistant
     - For clipboard mode: User saves applydir.json to working directory
     - The applydir.json is automatically applied to the codebase (vibedir watching for file)
     - If auto_commit is configured then commit command is run (with the LLM generated or a generic commit message)
-    - Any commands configured to run automatically are run and (if configured) results readied for next prompt
+    - Any commands configured to run automatically are run async and (if configured) and results readied for next prompt
 
 ## TUI (in design phase, needs adjustment to Textual best practices)
 
-### Main Menu Header v1
-- Current Prompt: Press 's|c' to [commit current changes and] [send|copy prompt to clipboard]
-  - Errors: [Error(s) encountered when applying latest changes.]
-  - Results: [Tests {status_icon} - [Lint {status_icon} - [{command name}{status_icon}
-  - Auxillary: {comma delim list of up to 5 included files... n more} 
-  - Task ('t' to [set|edit]): [preview of current task wording...] 
+### Main Menu v2 (three column layout) 'm' for menus list
+Latest changes | Prompt | Command Results
 
-- Other Results: [Tests {status_icon} - [Lint {status_icon} - [{command name}{status_icon}
-- Latest Changes: {status_icon}
-- Status Legend: success ✅ - running {spinner} - failed ❌ -  not run ❓ - bad config ⚠️ - waiting ⏳
-- LLM Changes: {comma delim list of up to 5 included files... n more} 
-- External Changes: {comma delim list of up to 5 included files... n more} 
+All file names use FileLink for easy opening
 
-         
-- Menus: ('m') Source Control settings, boilerplate for each configured [command]
-- Previous commit: (Last commit message)
-- Working commit: (Working commit message) # if current changes
+#### Latest changes column (left) 'd' diff, 'ctrl-r' revert
+Errors: {errors list if errors exist from applying changes}
+Latest changes by {model} (n files):
+- file1.py [{number of changes in file1}]
+- file2.py [{number of changes in file2}]
 
-### Notes on Main Menu Header v1 fields:
+Other changes detected: # these are files that have been changed by user/other since last prompt send 
+- file3.md by {username}
+- file4.py by {username}
+
+Revert most recent changes requires revert_changes_command and changes_exist_command to be configured and is only available if changes have been made since last commit (changes_exist_result). This will also automatically add the reverted files to the prompt.
+
+#### Prompt task column (center) (sync with prompt.md, see prompt_design.md), 'a' add file, If in api mode: 'ctrl-enter' to [commit current changes and] send, if clipboard mode: 'c' to [commit current changes and] copy prompt to clipboard
 The [commit current changes and] portion of the Current Prompt top message will be displayed if changes have been made (as detected by changes_exist_result) and AUTO_COMMIT is set to 'previous'.
+{Chat bubbles showing prompt history and latest prompt in progress} 
+{Prompt task for quick entry/edit}
+{Scrollable filenames and command names for files/results to be included in the prompt}
 
-The [send|copy prompt to clipboard] will be "send" if mode = api, and "copy prompt to clipboard" if mode = clipboard
+#### Command results column (right), run manual command ('R') and include output in prompt ('r')
 
-Errors line is only shown if errors have been encountered on the latest apply_code_changes (e.g. applydir) attempt.
-
-Each of the command results (e.g. Test, Lint) will be shown in either the Results in Prompt section (if include_results=true) or the other Results section (if include_results=true). 
-
-The status icons next to each of command will be:
-- ✅ if the configured command has run and it's success value yields true
-- ❌ if the configured command has run and it's success value yields false
+The status icons next to each of command will be (configurable):
+- ✅ if the configured command has run (since the last prompt sent) and it's success value yields true
+- ❌ if the configured command has run (since the last prompt sent) and it's success value yields false
 - {spinner} if the configured command is still running
 - ❓ if the configured run_on value is empty and the configured command has not been run manually
-- ⚠️ if the command value is not set in the configuration
-- ⏳ if the command is waiting for its configured run_on event to happen before running
+- ⚠️ if the command value is bad or not set in the configuration
+- ⏳ if the command is waiting for its configured run_on event to happen (since the last prompt send) before running
 
-### Main Menu v1
-1. Edit task for prompt ('e')
-2. Add files to prompt ('a')
+{commands with their results in order of configuration}
+- {✔ if set to be in prompt| ⊝ if not set to be in prompt} {command name} {status_icon}
+- For Example:
+  - ✔ Tests ✅
+  - ✔ Lint ❌
+  - ⊝ Format ✅
+  - ✔ Manual [{number of manual command results included in prompt}]
 
-3. Run tests ('t') # if TEST_COMMAND available
-3. Re-run tests ('t') $ TEST_COMMAND available and test results available
-4. Add Test Results to prompt # only if test results are available and not already in prompt
+### Menus list: ('m') to return to main menu. 
+1. Source Control settings
+2. {Command 1 name} config
+3. {Command 2 name} config
+4. ...
+5. {Command n name} config
 
-5. Run lint # if LINT_COMMAND available
-5. Re-run lint # LINT_COMMAND available and lint results available
-6. Add Linting Results # only if linting results are available and not already in prompt
-5. Run CMD # if CMD_COMMAND available
-5. Add CMD Results # only if AUTO_COMMAND results are available and not already in prompt
-6. Run command ('R') and include output in prompt ('r')
-7. Revert most recent changes [requires REVERT_CHANGES_COMMAND, CHANGES_EXIST_COMMAND, changes_exist_result] # only if changes have been made since last commit (changes_exist_result)
+### CLI Commands Menu Header (there will be one menu for each of the configured commands)
+Command Name: {name}
+Command: {command}
+Result: [success✅|running⏳|failed❌|not run❓] # uses configured icons plus wording
+Result in current prompt: [✔ Yes|⊝ No]
+Run: {run_on}
+Success determined by: {success_value}
+Auto-Include results in prompt: {include_results}
+Result File: /my/temp/test/results/file/full/path.txt # To be 'n/a' if not available - clickable (FileLink) for vscode edit
 
-### Main Menu Header v2
-
-Latest changes (n files) 'd' diff 'r' revert |  Prompt 'ctrl-enter' to send (sync with prompt.md, see prompt_design.md) | Command Results (in prompt/out of prompt)
-file1.py                                     
-file2.py
-...
-
-### CLI UI Test/Lint/CMD Menu Header
-Test results in prompt: [Yes|No]
-Result: [success✅|running⏳|failed❌|not run❓]
-Result File: /my/temp/test/results/file/full/path.txt # blank if not available - clickable for vscode edit
-Test Command: {TEST_COMMAND}
-Test Result: {TEST_SUCCESS}
-Auto Test: {AUTO_TEST} - Share Test Results: {INCLUDE_TEST_RESULTS}
-
-The above menu will act as the template for Tests, Lint, and CMD menues
-
-### CLI UI Test/Lint/CMD Menu
-1. Run tests
+### CLI Commands Menu
+1. Run {name} ({command})
 2. [Add test results to prompt|Remove test results from prompt] # depending on current prompt state
-3. Set test command and result
-4. Turn [ON|OFF] auto test # depending on current AUTO_TEST value
+3. Configure this command (can also edit .vibedir/config.toml directly) # Will open a walkthrough of each command setting
 
 ### CLI UI Source Control Menu Header
 - TBD
@@ -107,7 +96,7 @@ The above menu will act as the template for Tests, Lint, and CMD menues
 ---
 
 ## vibedir.txt
-The vibedir.txt file is generated from the codebase, dev.md, and other auxillary information needed in order to give na LLM all of the information needed to begin working with the developer. It is used on session init and refresh (for context window) in the cut/paste mode, and every time in API mode. 
+The vibedir.txt file is generated from the codebase, dev.md, and other auxillary information needed in order to give na LLM all of the information needed to begin working with the developer. It is used on session init and refresh (for context window) in the cut/paste mode, and every time in API mode. Empty tags are not included.
 
 The format will be similar to the following:
 ```
@@ -134,12 +123,12 @@ The format will be similar to the following:
 
 The DEV_GUIDELINES, CODEBASE, and CODE_CHANGE_INSTRUCTIONS will be included on session start or refresh. 
 
-The COMMANDS_AND_RESULTS will contain each command and its results that has been run and is set to be shared.
+The COMMANDS_AND_RESULTS will contain each command (plus its results) if it is set to be included in the prompt and has been run 
 
 The TASK will be supplied if a task has been defined by the user (there may be times that the command results just speak for themselves)
 
 #### Splitting vibedir.txt into vibedir_part1ofn.txt parts
-If the user is in clipboard mode, then the vibedir.txt will be split into (~40k char) parts named vibedir_part1ofn.text in order to avoid truncation by the LLM UI. 
+If the user is in clipboard mode, then the vibedir.txt will be split into (clipboard_max_chars_per_file char) parts named vibedir_part1ofn.text in order to avoid truncation by the LLM UI. 
 
 ## Core Components
 
@@ -150,13 +139,13 @@ If the user is in clipboard mode, then the vibedir.txt will be split into (~40k 
 | **`applydir`** | Takes changes from LLM (in json described in CODE_CHANGE_INSTRUCTIONS) and applies them to the code base |
 | **`fileclip`** | Clipboard control (for pasting files into UI) |
 | **`vibedir`** | CLI based UI. UI orchestration, clipboard, token math |
-| **`apibump`** | API client (includes LiteLLM wrapper), model metadata, context limits |
+| **`apibump`** | API client (includes LiteLLM wrapper), model metadata, context limits, analytics |
 
 ---
 
 ### Token Counting
 - In CLIPBOARD mode, request tokens are counted for each generated prompt, and once 70% of the LLM context window has been reached, an automatic refresh will be triggered (where dev.md, code, and guidelines are reshared). We can also count tokens received in teh applydir.json file, but we have no way to count additional prompt information added by the user in the LLM UI, or additional response information outside of the applydir.json file.  
-- In API mode, all prompt/response tokens can be counted. 
+- In API mode, all prompt/response tokens are counted. 
 
 ## Todo
 - Build CLI menu selections and status items (test config, latest number of changes, latest commit message, latest token count)
