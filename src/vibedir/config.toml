@@ -39,8 +39,8 @@ changes_exist_result = "exit_code"
 auto_diff = false  # [true|false]
 diff_command = "git diff"
 
-# Show legend in the header
-show_command_legend_in_header = true  # [true|false]
+# Number of messages to render in prompt history in Textual
+prompt_history_message_count = 10
 
 # Default tests directory (used in Tests command above)
 tests_directory = '{{ base_directory }}/tests'

@@ -13,7 +13,7 @@ VibeDir is a utility to facilitate code modifications when using an AI assistant
 
 ### User runs: vibedir CLI from the desired working directory
 1. TUI menu pops up with options to:
-  - Start new session (or refresh session) - this loads full session context (dev.md, code change instructions, etc.)
+  - Start new session (or refresh session) - this loads full session context (dev.md, code change instructions, etc.). Starting a new session backs up the existing prompt.md to prompt.md.{YYYY-MM-DD_HH-MM-SS} and creates a fresh prompt.md file.
   - Define prompt (task, files, command results) for LLM (can be done in prompt.md)
   - Generate prompt (vibedir.txt file split into parts as needed if clipboard mode) that hold task and context information and copy to clipboard or send via API
 
@@ -41,13 +41,22 @@ Other changes detected: # these are files that have been changed by user/other s
 - file3.md by {username}
 - file4.py by {username}
 
+Any files with auto-detected changes will be automatically included in the prompt column (user can remove them if desired).
+
 Revert most recent changes requires revert_changes_command and changes_exist_command to be configured and is only available if changes have been made since last commit (changes_exist_result). This will also automatically add the reverted files to the prompt.
 
 #### Prompt task column (center) (sync with prompt.md, see prompt_design.md), 'a' add file, If in api mode: 'ctrl-enter' to [commit current changes and] send, if clipboard mode: 'c' to [commit current changes and] copy prompt to clipboard
-The [commit current changes and] portion of the Current Prompt top message will be displayed if changes have been made (as detected by changes_exist_result) and AUTO_COMMIT is set to 'previous'.
-{Chat bubbles showing prompt history and latest prompt in progress} 
-{Prompt task for quick entry/edit}
-{Scrollable filenames and command names for files/results to be included in the prompt}
+The [commit current changes and] portion of the Current Prompt top message will be displayed if changes have been made (as detected by changes_exist_result) and AUTO_COMMIT is set to 'previous'. This label/message updates reactively based on the mode, config, and state.
+
+{Chat bubbles showing prompt history and latest prompt in progress, with support for Markdown rendering. Bubbles are aligned left for LLM/Assistant responses and right for User messages. The number of messages rendered is configurable (default: 10), but the full history is maintained in prompt.md. Previous chat bubbles along with their associated file/results data scroll together.}
+
+{Prompt task for quick entry/edit in a fixed text area at the bottom, which remains accessible even when the chat history is scrolled.}
+
+{Scrollable filenames and command names for files/results to be included in the prompt. This list is populated/unpopulated dynamically: by user selecting items from the right column (toggles sync bi-directionally), or by adding a file using 'a' (pops up a dialog for full path selection with command completion or picker). Items can be removed by selecting an 'X' next to the file/results name. If a user removes a command result here, it is reflected in the right column (untoggles it).}
+
+If there is a parse error in prompt.md, notify the user and provide options to retry (parse again after manual fix) or auto-fix (append new pending section).
+
+The model name for assistant responses is supplied from the LLM response (e.g., in applydir.json). Timestamps use local time (e.g., datetime.now() without timezone).
 
 #### Command results column (right), run manual command ('R') and include output in prompt ('r')
 
@@ -66,6 +75,8 @@ The status icons next to each of command will be (configurable):
   - ✔ Lint ❌
   - ⊝ Format ✅
   - ✔ Manual [{number of manual command results included in prompt}]
+
+Toggling inclusion of command results here is reflected in the prompt column's inclusions list.
 
 ### Menus list: ('m') to return to main menu. 
 1. Source Control settings
@@ -153,5 +164,3 @@ If the user is in clipboard mode, then the vibedir.txt will be split into (clipb
 - Git integration (commit each change so can be reverted, flatten on pr?) - configurable (see config)
 - Tests configuration
 - Add token counting (tiktoken) in order to keep track of when to reshare dev.md, codebase for context (based on LLM context window)
-
----
