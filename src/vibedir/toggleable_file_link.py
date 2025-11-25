@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Callable
 
-from textual import on
+from textual import on, events
 from textual.app import ComposeResult
 from textual.widget import Widget
-from textual.widgets import Button, Static
+from textual.widgets import Static
 from textual.message import Message
 from textual.containers import Horizontal
 
@@ -28,11 +28,10 @@ class ToggleableFileLink(Widget):
         align: left middle;
     }
     
-    ToggleableFileLink .toggle-btn {
+    ToggleableFileLink .toggle-static {
         width: 3;
         min-width: 3;
         height: auto;
-        min-height: 0;
         background: transparent;
         border: none;
         padding: 0;
@@ -40,7 +39,7 @@ class ToggleableFileLink(Widget):
         content-align: center middle;
     }
     
-    ToggleableFileLink .toggle-btn:hover {
+    ToggleableFileLink .toggle-static:hover {
         background: $boost;
     }
     
@@ -49,11 +48,10 @@ class ToggleableFileLink(Widget):
         height: auto;
     }
     
-    ToggleableFileLink .remove-btn {
+    ToggleableFileLink .remove-static {
         width: 3;
         min-width: 3;
         height: auto;
-        min-height: 0;
         background: transparent;
         border: none;
         padding: 0;
@@ -61,7 +59,7 @@ class ToggleableFileLink(Widget):
         content-align: center middle;
     }
     
-    ToggleableFileLink .remove-btn:hover {
+    ToggleableFileLink .remove-static:hover {
         background: $boost;
         color: $error;
     }
@@ -125,11 +123,10 @@ class ToggleableFileLink(Widget):
 
     def compose(self) -> ComposeResult:
         with Horizontal():
-            yield Button(
+            yield Static(
                 "✓" if self._is_toggled else "☐",
                 id="toggle",
-                classes="toggle-btn",
-                variant="default",
+                classes="toggle-static",
             )
             yield FileLink(
                 self._path,
@@ -138,11 +135,10 @@ class ToggleableFileLink(Widget):
                 command_builder=self._command_builder,
                 classes="file-link-container",
             )
-            yield Button(
+            yield Static(
                 "×",
                 id="remove",
-                classes="remove-btn",
-                variant="default",
+                classes="remove-static",
             )
 
     def on_mount(self) -> None:
@@ -156,15 +152,15 @@ class ToggleableFileLink(Widget):
         else:
             self.remove_class("disabled")
 
-    @on(Button.Pressed, "#toggle")
-    def _on_toggle_pressed(self, event: Button.Pressed) -> None:
-        """Handle toggle button click."""
+    @on(events.Click, "#toggle")
+    def _on_toggle_clicked(self, event: events.Click) -> None:
+        """Handle toggle click."""
         event.stop()  # Prevent bubbling
         self._is_toggled = not self._is_toggled
         
-        # Update button label
-        toggle_btn = self.query_one("#toggle", Button)
-        toggle_btn.label = "✓" if self._is_toggled else "☐"
+        # Update static content
+        toggle_static = self.query_one("#toggle", Static)
+        toggle_static.update("✓" if self._is_toggled else "☐")
         
         # Update disabled state
         self._update_disabled_state()
@@ -172,9 +168,9 @@ class ToggleableFileLink(Widget):
         # Post message
         self.post_message(self.Toggled(self._path, self._is_toggled))
 
-    @on(Button.Pressed, "#remove")
-    def _on_remove_pressed(self, event: Button.Pressed) -> None:
-        """Handle remove button click."""
+    @on(events.Click, "#remove")
+    def _on_remove_clicked(self, event: events.Click) -> None:
+        """Handle remove click."""
         event.stop()  # Prevent bubbling
         self.post_message(self.Removed(self._path))
 
