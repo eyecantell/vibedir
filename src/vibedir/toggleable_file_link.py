@@ -31,10 +31,13 @@ class ToggleableFileLink(Widget):
     ToggleableFileLink .toggle-btn {
         width: 3;
         min-width: 3;
+        height: auto;
+        min-height: 0;
         background: transparent;
         border: none;
         padding: 0;
         color: $text;
+        content-align: center middle;
     }
     
     ToggleableFileLink .toggle-btn:hover {
@@ -43,15 +46,19 @@ class ToggleableFileLink(Widget):
     
     ToggleableFileLink .file-link-container {
         width: 1fr;
+        height: auto;
     }
     
     ToggleableFileLink .remove-btn {
         width: 3;
         min-width: 3;
+        height: auto;
+        min-height: 0;
         background: transparent;
         border: none;
         padding: 0;
         color: $error;
+        content-align: center middle;
     }
     
     ToggleableFileLink .remove-btn:hover {

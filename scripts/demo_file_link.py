@@ -12,11 +12,11 @@ class DemoApp(App):
     }
     ListView {
         height: auto;
-        overflow-y: auto;  # If the list is long
+        overflow-y: auto;
     }
     ListItem {
-        height: auto;  # Allow auto height to prevent clipping
-        align: center middle;  # Vertical center for stability on hover
+        height: 1;
+        align: left middle;
     }
     """
 
