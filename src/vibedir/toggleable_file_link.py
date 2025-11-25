@@ -5,60 +5,66 @@ from typing import Optional, Callable
 
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Horizontal  # Import for robust horizontal layout
+from textual.widget import Widget
+from textual.widgets import Button, Static
 from textual.message import Message
-from textual.widgets import Button
+from textual.containers import Horizontal
 
-from .file_link import FileLink  # Assuming this is your attached FileLink
+from .file_link import FileLink
 
-class ToggleableFileLink(Horizontal):  # Inherit from Horizontal for better layout control
-    """A FileLink with a toggle (☐/✔) on the left and remove (X) on the right."""
+
+class ToggleableFileLink(Widget):
+    """A FileLink with a toggle (☐/✓) on the left and remove (×) on the right."""
 
     DEFAULT_CSS = """
     ToggleableFileLink {
-        height: 1;     # Constrain to single line to mask shifts and fit compact use
-        width: auto;   # Size to content, prevent stretching
-        align: center middle;  # Ensure vertical centering
-        overflow-x: auto;  # Scroll if filename is too long
-        background: $panel;  # Subtle background for overall contrast if text is blending
+        height: auto;
+        width: 100%;
     }
-    ToggleableFileLink > * {
-        margin: 0;  # Remove all default margins on children for tight control
-        padding: 0; # Remove all paddings for tighter spacing
-        height: 1;  # Force all children to single-line height
+    
+    ToggleableFileLink Horizontal {
+        height: auto;
+        width: 100%;
+        align: left middle;
     }
-    ToggleableFileLink .toggle-button {
-        width: 2;  # Fixed width to prevent shifting
+    
+    ToggleableFileLink .toggle-btn {
+        width: 3;
+        min-width: 3;
         background: transparent;
         border: none;
-        content-align: center middle;  # Explicit centering
-        color: white;  # Force visibility
+        padding: 0;
+        color: $text;
     }
-    ToggleableFileLink .toggle-button:hover {
-        /* No styles - prevent any changes that could "hide" the symbol */
+    
+    ToggleableFileLink .toggle-btn:hover {
+        background: $boost;
     }
-    ToggleableFileLink .file-link {
-        width: auto;  # Size to filename content
+    
+    ToggleableFileLink .file-link-container {
+        width: 1fr;
     }
-    ToggleableFileLink .file-link > Button {
-        padding: 0;   # No extra padding
-        content-align: center middle;  # Center text vertically
-        color: white !important;  # Force high-contrast color to override theme/background blending
-        background: transparent;  # Ensure no background hides text
-    }
-    ToggleableFileLink .remove-button {
-        width: 1;  # Tight width for single char
+    
+    ToggleableFileLink .remove-btn {
+        width: 3;
+        min-width: 3;
         background: transparent;
-        color: red;  # Fixed visible red
         border: none;
-        content-align: center middle;  # Explicit centering to prevent shifts
+        padding: 0;
+        color: $error;
     }
-    ToggleableFileLink .remove-button:hover {
-        /* No styles - prevent any changes that could "hide" the symbol */
+    
+    ToggleableFileLink .remove-btn:hover {
+        background: $boost;
+        color: $error;
     }
-    ToggleableFileLink.disabled .file-link Button {
-        color: gray !important;  # Explicit gray but visible, override any dimming
-        text-style: none;
+    
+    ToggleableFileLink.disabled {
+        opacity: 0.5;
+    }
+    
+    ToggleableFileLink.disabled .file-link-container {
+        text-style: dim;
     }
     """
 
@@ -83,81 +89,101 @@ class ToggleableFileLink(Horizontal):  # Inherit from Horizontal for better layo
         line: Optional[int] = None,
         column: Optional[int] = None,
         command_builder: Optional[Callable] = None,
-        on_toggle: Optional[Callable] = None,
-        on_remove: Optional[Callable] = None,
         disable_on_untoggle: bool = False,
         name: Optional[str] = None,
         id: Optional[str] = None,
         classes: Optional[str] = None,
     ) -> None:
+        """
+        Parameters
+        ----------
+        path : Path | str
+            Full path to the file.
+        initial_toggle : bool
+            Whether the item starts toggled (checked).
+        line, column : int | None
+            Optional cursor position to jump to.
+        command_builder : Callable | None
+            Function for opening the file.
+        disable_on_untoggle : bool
+            If True, dim/disable the link when untoggled.
+        """
         super().__init__(name=name, id=id, classes=classes)
-        self.can_focus_children = True  # Allow tab focus to children (checkbox, etc.)
         self._path = Path(path).resolve()
         self._is_toggled = initial_toggle
         self._line = line
         self._column = column
         self._command_builder = command_builder
-        self._on_toggle = on_toggle
-        self._on_remove = on_remove
         self._disable_on_untoggle = disable_on_untoggle
-        self._update_classes()
 
     def compose(self) -> ComposeResult:
-        yield Button(
-            "✔" if self._is_toggled else "☐",
-            id="toggle",
-            classes="toggle-button",
-            # No tooltip
-        )
-        yield FileLink(
-            self._path,
-            line=self._line,
-            column=self._column,
-            command_builder=self._command_builder,
-            classes="file-link",
-        )
-        yield Button(
-            "X",
-            id="remove",
-            classes="remove-button",
-            tooltip="Remove file",
-        )
+        with Horizontal():
+            yield Button(
+                "✓" if self._is_toggled else "☐",
+                id="toggle",
+                classes="toggle-btn",
+                variant="default",
+            )
+            yield FileLink(
+                self._path,
+                line=self._line,
+                column=self._column,
+                command_builder=self._command_builder,
+                classes="file-link-container",
+            )
+            yield Button(
+                "×",
+                id="remove",
+                classes="remove-btn",
+                variant="default",
+            )
 
     def on_mount(self) -> None:
-        # Force refresh after mounting to ensure initial state renders correctly
-        toggle = self.query_one("#toggle", Button)
-        toggle.label = "✔" if self._is_toggled else "☐"
-        toggle.refresh()
-        self.refresh()  # Full widget refresh for visibility
+        """Update initial disabled state."""
+        self._update_disabled_state()
 
-    def _update_classes(self) -> None:
+    def _update_disabled_state(self) -> None:
+        """Update the disabled class based on toggle state."""
         if self._disable_on_untoggle and not self._is_toggled:
             self.add_class("disabled")
         else:
             self.remove_class("disabled")
-        self.refresh()  # Refresh on state change
 
     @on(Button.Pressed, "#toggle")
-    async def _on_toggle_pressed(self, _: Button.Pressed) -> None:
+    def _on_toggle_pressed(self, event: Button.Pressed) -> None:
+        """Handle toggle button click."""
+        event.stop()  # Prevent bubbling
         self._is_toggled = not self._is_toggled
+        
+        # Update button label
         toggle_btn = self.query_one("#toggle", Button)
-        toggle_btn.label = "✔" if self._is_toggled else "☐"
-        self._update_classes()
+        toggle_btn.label = "✓" if self._is_toggled else "☐"
+        
+        # Update disabled state
+        self._update_disabled_state()
+        
+        # Post message
         self.post_message(self.Toggled(self._path, self._is_toggled))
-        if self._on_toggle:
-            self._on_toggle(self._path, self._is_toggled)
-        toggle_btn.refresh()  # Ensure visual update
 
     @on(Button.Pressed, "#remove")
-    async def _on_remove_pressed(self, _: Button.Pressed) -> None:
+    def _on_remove_pressed(self, event: Button.Pressed) -> None:
+        """Handle remove button click."""
+        event.stop()  # Prevent bubbling
         self.post_message(self.Removed(self._path))
-        if self._on_remove:
-            self._on_remove(self._path)
 
     @on(FileLink.Clicked)
     def _on_file_clicked(self, event: FileLink.Clicked) -> None:
-        # Bubble up the event if needed
+        """Handle file link click - prevent if disabled."""
         if self._disable_on_untoggle and not self._is_toggled:
-            event.stop()  # Prevent opening if disabled
-        else:
-            self.post_message(event)  # Re-post for parent handling
+            event.stop()
+        # Otherwise let it bubble up
+
+    @property
+    def is_toggled(self) -> bool:
+        """Get the current toggle state."""
+        return self._is_toggled
+
+    @property
+    def path(self) -> Path:
+        """Get the file path."""
+        return self._path
