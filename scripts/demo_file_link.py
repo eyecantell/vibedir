@@ -10,6 +10,14 @@ class DemoApp(App):
     Screen {
         align: center middle;
     }
+    ListView {
+        height: auto;
+        overflow-y: auto;  # If the list is long
+    }
+    ListItem {
+        height: auto;  # Allow auto height to prevent clipping
+        align: center middle;  # Vertical center for stability on hover
+    }
     """
 
     # Define files as a class attr for access in on_mount
@@ -36,11 +44,14 @@ class DemoApp(App):
         self.log(f"FileLink clicked → {event.path}{pos}")
 
     def on_mount(self) -> None:
+        self.lv.can_focus_children = True
         for f in self.FILES:
-            self.lv.append(ListItem(
+            list_item = ListItem(
                 ToggleableFileLink(f, line=1, initial_toggle=False, disable_on_untoggle=True),
-                name=str(f)
-            ))
+                name=str(f),
+            )
+            list_item.can_focus_children = True
+            self.lv.append(list_item)
 
     @on(ToggleableFileLink.Toggled)
     def toggle_handled(self, event: ToggleableFileLink.Toggled) -> None:
@@ -49,6 +60,12 @@ class DemoApp(App):
     @on(ToggleableFileLink.Removed)
     def remove_handled(self, event: ToggleableFileLink.Removed) -> None:
         self.log(f"Removed {event.path}")
+        # Safely remove by matching ListItem name to str(path)
+        path_str = str(event.path)
+        for child in list(self.lv.children):  # Copy list to avoid modification issues
+            if isinstance(child, ListItem) and child.name == path_str:
+                child.remove()
+                break
 
 if __name__ == "__main__":
     DemoApp().run()
