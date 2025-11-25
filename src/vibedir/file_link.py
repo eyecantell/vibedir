@@ -82,9 +82,6 @@ class FileLink(Widget):
     @on(Button.Pressed, "#btn")
     async def _on_button_pressed(self, _: Button.Pressed) -> None:
         """Open the file with the VSCode CLI."""
-        # FIRST notification - verify method is called
-        self.app.notify("🔵 Button clicked!", title="Debug", timeout=3)
-        
         self.post_message(self.Clicked(self._path, self._line, self._column))
 
         # Try to get relative path from current working directory
@@ -103,25 +100,40 @@ class FileLink(Widget):
         else:
             goto_arg = file_arg
 
-        # SECOND notification - show what we're trying to open
-        self.app.notify(f"🟡 Opening: {goto_arg}", title="Debug", timeout=3)
-        
         import os
         
         try:
+            # Use subprocess.run() which waits for the command to complete
+            # This is important - Popen() doesn't work because the code command
+            # needs to finish its handshake with VSCode
             result = subprocess.run(
                 ["code", "--goto", goto_arg],
                 env=os.environ.copy(),
                 cwd=str(Path.cwd()),
                 capture_output=True,
                 text=True,
-                timeout=3
+                timeout=5
             )
             
-            # THIRD notification - show result
-            self.app.notify(f"🟢 Done! RC={result.returncode}", title="Debug", timeout=3)
+            if result.returncode == 0:
+                self.app.notify(f"Opened {self._path.name}", title="FileLink", timeout=1.5)
+            else:
+                error_msg = result.stderr.strip() if result.stderr else f"Exit code {result.returncode}"
+                self.app.notify(
+                    f"Failed to open {self._path.name}: {error_msg}",
+                    severity="error",
+                    timeout=3,
+                )
             
         except subprocess.TimeoutExpired:
-            self.app.notify("🔴 Timeout!", severity="error", timeout=3)
+            self.app.notify(
+                f"Timeout opening {self._path.name}",
+                severity="error",
+                timeout=3,
+            )
         except Exception as exc:
-            self.app.notify(f"🔴 Error: {exc}", severity="error", timeout=3)
+            self.app.notify(
+                f"Failed to open {self._path.name}: {exc}",
+                severity="error",
+                timeout=3,
+            )
