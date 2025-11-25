@@ -2,7 +2,7 @@
 from textual.app import App, ComposeResult, on
 from textual.widgets import Header, Footer, ListView, ListItem
 from pathlib import Path
-from vibedir import FileLink  
+from vibedir import FileLink, ToggleableFileLink 
 
 
 class DemoApp(App):
@@ -30,16 +30,25 @@ class DemoApp(App):
         self.lv = ListView()
         yield self.lv
 
-    def on_mount(self) -> None:
-        # Now populate safely after mounting
-        for f in self.FILES:
-            self.lv.append(ListItem(FileLink(f, line=1), name=str(f)))
-
     @on(FileLink.Clicked)
     def file_clicked(self, event: FileLink.Clicked) -> None:
         pos = f" @ {event.line}:{event.column}" if event.line else ""
         self.log(f"FileLink clicked → {event.path}{pos}")
 
+    def on_mount(self) -> None:
+        for f in self.FILES:
+            self.lv.append(ListItem(
+                ToggleableFileLink(f, line=1, initial_toggle=False, disable_on_untoggle=True),
+                name=str(f)
+            ))
+
+    @on(ToggleableFileLink.Toggled)
+    def toggle_handled(self, event: ToggleableFileLink.Toggled) -> None:
+        self.log(f"Toggled {event.path} to {event.is_toggled}")
+
+    @on(ToggleableFileLink.Removed)
+    def remove_handled(self, event: ToggleableFileLink.Removed) -> None:
+        self.log(f"Removed {event.path}")
 
 if __name__ == "__main__":
     DemoApp().run()

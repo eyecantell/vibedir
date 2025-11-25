@@ -1,4 +1,5 @@
 from .file_link import FileLink
+from .toggleable_file_link import ToggleableFileLink
 from .models import (
     Attachment,
     command_status,
@@ -26,6 +27,7 @@ __all__ = [
     "FileLink",
     "get_bundled_config",
     "init_config",
-    "is_resource"
+    "is_resource",
     "load_config",
+    "ToggleableFileLink",
     ]
