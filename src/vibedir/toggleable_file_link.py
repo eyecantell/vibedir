@@ -14,7 +14,7 @@ from .file_link import FileLink
 
 
 class ToggleableFileLink(Widget):
-    """A FileLink with a toggle (☐/✓) on the left and remove (×) on the right."""
+    """A FileLink with an optional toggle (☐/✓) on the left and optional remove (×) on the right."""
 
     DEFAULT_CSS = """
     ToggleableFileLink {
@@ -91,6 +91,8 @@ class ToggleableFileLink(Widget):
         path: Path | str,
         *,
         initial_toggle: bool = False,
+        show_toggle: bool = True,
+        show_remove: bool = True,
         line: Optional[int] = None,
         column: Optional[int] = None,
         command_builder: Optional[Callable] = None,
@@ -106,6 +108,10 @@ class ToggleableFileLink(Widget):
             Full path to the file.
         initial_toggle : bool
             Whether the item starts toggled (checked).
+        show_toggle : bool
+            Whether to display the toggle component (default: True).
+        show_remove : bool
+            Whether to display the remove component (default: True).
         line, column : int | None
             Optional cursor position to jump to.
         command_builder : Callable | None
@@ -116,6 +122,8 @@ class ToggleableFileLink(Widget):
         super().__init__(name=name, id=id, classes=classes)
         self._path = Path(path).resolve()
         self._is_toggled = initial_toggle
+        self._show_toggle = show_toggle
+        self._show_remove = show_remove
         self._line = line
         self._column = column
         self._command_builder = command_builder
@@ -123,11 +131,12 @@ class ToggleableFileLink(Widget):
 
     def compose(self) -> ComposeResult:
         with Horizontal():
-            yield Static(
-                "✓" if self._is_toggled else "☐",
-                id="toggle",
-                classes="toggle-static",
-            )
+            if self._show_toggle:
+                yield Static(
+                    "✓" if self._is_toggled else "☐",
+                    id="toggle",
+                    classes="toggle-static",
+                )
             yield FileLink(
                 self._path,
                 line=self._line,
@@ -135,11 +144,12 @@ class ToggleableFileLink(Widget):
                 command_builder=self._command_builder,
                 classes="file-link-container",
             )
-            yield Static(
-                "×",
-                id="remove",
-                classes="remove-static",
-            )
+            if self._show_remove:
+                yield Static(
+                    "×",
+                    id="remove",
+                    classes="remove-static",
+                )
 
     def on_mount(self) -> None:
         """Update initial disabled state."""
@@ -154,7 +164,9 @@ class ToggleableFileLink(Widget):
 
     @on(events.Click, "#toggle")
     def _on_toggle_clicked(self, event: events.Click) -> None:
-        """Handle toggle click."""
+        """Handle toggle click (if shown)."""
+        if not self._show_toggle:
+            return
         event.stop()  # Prevent bubbling
         self._is_toggled = not self._is_toggled
         
@@ -170,7 +182,9 @@ class ToggleableFileLink(Widget):
 
     @on(events.Click, "#remove")
     def _on_remove_clicked(self, event: events.Click) -> None:
-        """Handle remove click."""
+        """Handle remove click (if shown)."""
+        if not self._show_remove:
+            return
         event.stop()  # Prevent bubbling
         self.post_message(self.Removed(self._path))
 

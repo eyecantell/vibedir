@@ -39,8 +39,8 @@ Latest changes by {model} (n files):
 - ...
 
 Other changes detected: # these are files that have been changed by user/other since last prompt send and will be automatically added to the prompt (middle column) but can be removed by the user by toggling here or in the middle (prompt) column.
-{✔ if set to be in prompt| ☐ if not set to be in prompt}
-- ✔ file3.md by {username}
+{✓ if set to be in prompt| ☐ if not set to be in prompt}
+- ✓ file3.md by {username}
 - ☐ file4.py by {username}
 - ...
 - Previous commit message: {80 char preview of most recent commit message}
@@ -76,12 +76,12 @@ The status icons next to each of command will be configurable and have defaults:
 
 {commands with their results in order of configuration}
 
-{✔ if set to be in prompt| ☐ if not set to be in prompt} {command name} {status_icon}
+{✓ if set to be in prompt| ☐ if not set to be in prompt} {command name} {status_icon}
 - For Example:
-  - ✔ Tests ✅
-  - ✔ Lint ❌
+  - ✓ Tests ✅
+  - ✓ Lint ❌
   - ☐ Format ✅
-  - ✔ Manual [{number of manual command results included in prompt}]
+  - ✓ Manual [{number of manual command results included in prompt}]
 
 Toggling inclusion of command results here is reflected in the prompt column's inclusions list.
 
@@ -96,7 +96,7 @@ Toggling inclusion of command results here is reflected in the prompt column's i
 - Command Name: {name}
 - Command: {command}
 - Result: [success✅|running⏳|failed❌|not run❓] # uses configured icons plus wording
-- Result in current prompt: [✔ Yes|☐ No]
+- Result in current prompt: [✓ Yes|☐ No]
 - Run: {run_on}
 - Success determined by: {success_value}
 - Auto-Include results in prompt: {include_results}
