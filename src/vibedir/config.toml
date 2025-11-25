@@ -118,3 +118,8 @@ level = "INFO"  # [CRITICAL|ERROR|WARNING|INFO|DEBUG]
 [prompt_icons]
 user = "👤"
 assistant = "🤖"
+
+[history]
+retention_messages = 50  # Keep last N messages' dirs; purge older.
+max_total_size_mb = 500  # Auto-purge oldest if exceeded.
+auto_cleanup_on_startup = true  # Run purge on app start.

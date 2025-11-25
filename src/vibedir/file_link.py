@@ -73,7 +73,7 @@ class FileLink(Widget):
             self._path.name,
             id="btn",
             tooltip=str(self._path),
-            variant="default",  # Move variant here if needed, but 'default' is already the default
+            variant="default", 
         )
 
     # ------------------------------------------------------------------ #
@@ -82,22 +82,46 @@ class FileLink(Widget):
     @on(Button.Pressed, "#btn")
     async def _on_button_pressed(self, _: Button.Pressed) -> None:
         """Open the file with the VSCode CLI."""
+        # FIRST notification - verify method is called
+        self.app.notify("🔵 Button clicked!", title="Debug", timeout=3)
+        
         self.post_message(self.Clicked(self._path, self._line, self._column))
 
-        # Build the argument list for `code`
-        arg = str(self._path)
-        if self._line is not None:
-            arg += f":{self._line}"
-            if self._column is not None:
-                arg += f":{self._column}"
-
+        # Try to get relative path from current working directory
         try:
-            # `run_process` is non-blocking and works inside the container
-            self.app.run_process(["code", arg])
-            self.app.notify(f"Opened {self._path.name}", title="FileLink", timeout=1.5)
-        except Exception as exc:  # pragma: no cover
-            self.app.notify(
-                f"Failed to open {self._path.name}: {exc}",
-                severity="error",
-                timeout=3,
+            cwd = Path.cwd()
+            relative_path = self._path.relative_to(cwd)
+            file_arg = str(relative_path)
+        except ValueError:
+            file_arg = str(self._path)
+
+        # Build the --goto argument with line:column if provided
+        if self._line is not None:
+            goto_arg = f"{file_arg}:{self._line}"
+            if self._column is not None:
+                goto_arg += f":{self._column}"
+        else:
+            goto_arg = file_arg
+
+        # SECOND notification - show what we're trying to open
+        self.app.notify(f"🟡 Opening: {goto_arg}", title="Debug", timeout=3)
+        
+        import os
+        
+        try:
+            result = subprocess.run(
+                ["code", "--goto", goto_arg],
+                env=os.environ.copy(),
+                cwd=str(Path.cwd()),
+                capture_output=True,
+                text=True,
+                timeout=3
             )
+            
+            # THIRD notification - show result
+            self.app.notify(f"🟢 Done! RC={result.returncode}", title="Debug", timeout=3)
+            
+        except subprocess.TimeoutExpired:
+            self.app.notify("🔴 Timeout!", severity="error", timeout=3)
+        except Exception as exc:
+            self.app.notify(f"🔴 Error: {exc}", severity="error", timeout=3)

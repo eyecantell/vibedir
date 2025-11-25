@@ -1,5 +1,4 @@
 # VibeDir - Functionality is not yet ready, but "COMING SOON" #
-
 VibeDir is a utility to facilitate code modifications when using an AI assistant. It generates prompts for large language models to modify a codebase. VibeDir supports manual workflows (clipboard mode) and will soon support API integration with the latest GenAI models.
 
 ## Overview  
@@ -29,47 +28,55 @@ VibeDir is a utility to facilitate code modifications when using an AI assistant
 ### Main Menu v2 (three column layout) 'm' for menus list
 Latest changes | Prompt | Command Results
 
-All file names use FileLink for easy opening
+All file names use FileLink class for easy opening
 
 #### Latest changes column (left) 'd' diff, 'ctrl-r' revert
 Errors: {errors list if errors exist from applying changes}
+
 Latest changes by {model} (n files):
 - file1.py [{number of changes in file1}]
 - file2.py [{number of changes in file2}]
+- ...
 
-Other changes detected: # these are files that have been changed by user/other since last prompt send 
-- file3.md by {username}
-- file4.py by {username}
+Other changes detected: # these are files that have been changed by user/other since last prompt send and will be automatically added to the prompt (middle column) but can be removed by the user by toggling here or in the middle (prompt) column.
+{✔ if set to be in prompt| ⊝ if not set to be in prompt}
+- ✔ file3.md by {username}
+- ⊝ file4.py by {username}
+- ...
+- Previous commit message: {80 char preview of most recent commit message}
+- Current commit message: {80 char preview of commit message to be used next}
 
 Any files with auto-detected changes will be automatically included in the prompt column (user can remove them if desired).
 
-Revert most recent changes requires revert_changes_command and changes_exist_command to be configured and is only available if changes have been made since last commit (changes_exist_result). This will also automatically add the reverted files to the prompt.
+Revert most recent changes requires revert_changes_command and changes_exist_command to be configured and is only available if changes have been made since last commit (changes_exist_result). This will also automatically add the reverted files to the prompt (and the user can remove them)
 
 #### Prompt task column (center) (sync with prompt.md, see prompt_design.md), 'a' add file, If in api mode: 'ctrl-enter' to [commit current changes and] send, if clipboard mode: 'c' to [commit current changes and] copy prompt to clipboard
 The [commit current changes and] portion of the Current Prompt top message will be displayed if changes have been made (as detected by changes_exist_result) and AUTO_COMMIT is set to 'previous'. This label/message updates reactively based on the mode, config, and state.
 
-{Chat bubbles showing prompt history and latest prompt in progress, with support for Markdown rendering. Bubbles are aligned left for LLM/Assistant responses and right for User messages. The number of messages rendered is configurable (default: 10), but the full history is maintained in prompt.md. Previous chat bubbles along with their associated file/results data scroll together.}
+{Chat bubbles showing prompt history and latest prompt in progress, with support for Markdown rendering. Bubbles are aligned left for LLM/Assistant responses and right for User messages. The number of messages rendered is configurable (prompt_history_message_count with default 10), but the full history is maintained in prompt.md. Previous chat bubbles along with their associated file/results data scroll together.}
 
-{Prompt task for quick entry/edit in a fixed text area at the bottom, which remains accessible even when the chat history is scrolled.}
+{Scrollable attachments (filenames and command names for command results) to be included in the prompt. This list is populated/unpopulated dynamically: by user selecting items from the right column (toggles sync bi-directionally), or by adding a file using 'a' (pops up a dialog for full path selection with textual picker) or by the auto-detect for changes made (in left column). Items can be removed by selecting an 'X' next to the file/results name. If a user removes a command result here, it is reflected in the right or left column (untoggles it).}
 
-{Scrollable filenames and command names for files/results to be included in the prompt. This list is populated/unpopulated dynamically: by user selecting items from the right column (toggles sync bi-directionally), or by adding a file using 'a' (pops up a dialog for full path selection with command completion or picker). Items can be removed by selecting an 'X' next to the file/results name. If a user removes a command result here, it is reflected in the right column (untoggles it).}
+{Prompt task for quick entry/edit in a fixed text area at the bottom (below the attachments list), which remains accessible even when the chat history is scrolled.}
 
-If there is a parse error in prompt.md, notify the user and provide options to retry (parse again after manual fix) or auto-fix (append new pending section).
+If there is a parse error in prompt.md, notify the user and provide options to retry (parse again after manual fix) or rebuild (rebuild from history dir).
 
 The model name for assistant responses is supplied from the LLM response (e.g., in applydir.json). Timestamps use local time (e.g., datetime.now() without timezone).
 
 #### Command results column (right), run manual command ('R') and include output in prompt ('r')
 
-The status icons next to each of command will be (configurable):
-- ✅ if the configured command has run (since the last prompt sent) and it's success value yields true
-- ❌ if the configured command has run (since the last prompt sent) and it's success value yields false
+The status icons next to each of command will be configurable and have defaults:
+- ✅ (success) if the configured command has run (since the last prompt sent) and it's success value yields true
+- ❌ (failed) if the configured command has run (since the last prompt sent) and it's success value yields false
 - {spinner} if the configured command is still running
-- ❓ if the configured run_on value is empty and the configured command has not been run manually
-- ⚠️ if the command value is bad or not set in the configuration
-- ⏳ if the command is waiting for its configured run_on event to happen (since the last prompt send) before running
+- ❓ (not run) if the configured run_on value is empty and the configured command has not been run manually
+- ⚠️ (not conifgured) if the command value is bad or not set in the configuration
+- ⏳ (waiting) if the command is waiting for its configured run_on event to happen (since the last prompt send) before running
+- {spinner} (running) if the command is currently running
 
 {commands with their results in order of configuration}
-- {✔ if set to be in prompt| ⊝ if not set to be in prompt} {command name} {status_icon}
+
+{✔ if set to be in prompt| ⊝ if not set to be in prompt} {command name} {status_icon}
 - For Example:
   - ✔ Tests ✅
   - ✔ Lint ❌
@@ -86,19 +93,19 @@ Toggling inclusion of command results here is reflected in the prompt column's i
 5. {Command n name} config
 
 ### CLI Commands Menu Header (there will be one menu for each of the configured commands)
-Command Name: {name}
-Command: {command}
-Result: [success✅|running⏳|failed❌|not run❓] # uses configured icons plus wording
-Result in current prompt: [✔ Yes|⊝ No]
-Run: {run_on}
-Success determined by: {success_value}
-Auto-Include results in prompt: {include_results}
-Result File: /my/temp/test/results/file/full/path.txt # To be 'n/a' if not available - clickable (FileLink) for vscode edit
+- Command Name: {name}
+- Command: {command}
+- Result: [success✅|running⏳|failed❌|not run❓] # uses configured icons plus wording
+- Result in current prompt: [✔ Yes|⊝ No]
+- Run: {run_on}
+- Success determined by: {success_value}
+- Auto-Include results in prompt: {include_results}
+- Result File: /my/test/results/file/full/path.txt # To be 'n/a' if not available - clickable (FileLink) for vscode edit
 
 ### CLI Commands Menu
 1. Run {name} ({command})
-2. [Add test results to prompt|Remove test results from prompt] # depending on current prompt state
-3. Configure this command (can also edit .vibedir/config.toml directly) # Will open a walkthrough of each command setting
+2. [Add results to prompt|Remove results from prompt] # depending on current prompt state
+3. Configure this command (can also edit .vibedir/config.toml directly) # If selected this will open a walkthrough of each command setting
 
 ### CLI UI Source Control Menu Header
 - TBD

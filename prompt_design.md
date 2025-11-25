@@ -18,9 +18,16 @@ Example:
 ```
 # vibedir session - 2025-11-17T14:22:31.111
 
-## 👤User - 2025-11-17 14:22:31.222
+## 👤User - 2025-11-23 14:22:31.222
 
 Write a fastapi app that serves my plotly dashboards.
+
+### Attachments
+.vibedir/history/2025-11-23T14:22:31.222_User/file1.py
+.vibedir/history/2025-11-23T14:22:31.222_User/file2.py
+.vibedir/history/2025-11-23T14:22:31.222_User/Tests.txt
+.vibedir/history/2025-11-23T14:22:31.222_User/Tests.json
+
 
 ## 🤖Assistant (grok-4) - 2025-11-17 14:23:15.312
 
@@ -29,7 +36,8 @@ Here is the initial implementation...
 ```python
 from fastapi import FastAPI
 ...
-
+### Attachments
+.vibedir/history/2025-11-17T14:23:15.312_Assistant/applydir.json
 
 ## 👤User - 2025-11-17 14:25:10.123
 
@@ -38,6 +46,9 @@ Add authentication with JWT.
 ## 🤖Assistant (grok-4) - 2025-11-17 14:25:48.124
 
 Updated with JWT auth...
+
+### Attachments
+.vibedir/history/2025-11-17T14:25:48.124_Assistant/applydir.json
 
 ## 👤Pending → (edit below)
 
@@ -48,6 +59,16 @@ Also here is the current error I'm seeing:
 Traceback (most recent call last):
   File ...
 ```
+
+When the user is creating a prompt (pending) the actual files to be attached would be shown in the Attachments section e.g.
+/my/files/file1.py
+/my/files/file2.py
+.vibedir/Pending_User/Tests.json
+ 
+Once the message is sent a new directory e.g. (.vibedir/history/2025-11-23T14:22:31.222_User/) would be created and files copied appropriately.
+
+
+
 
 Rules:
 - **Session Header**: Exactly one top-level `# vibedir session - <ISO-timestamp>` at the start (e.g., ISO 8601 without timezone for simplicity).

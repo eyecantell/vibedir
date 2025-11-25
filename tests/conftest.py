@@ -1,8 +1,6 @@
 import pytest
 import logging
 import os
-from pathlib import Path
-from datetime import datetime
 from vibedir import __version__
 
 

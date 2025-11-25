@@ -2,7 +2,7 @@
 from textual.app import App, ComposeResult, on
 from textual.widgets import Header, Footer, ListView, ListItem
 from pathlib import Path
-from vibedir import FileLink  # Assuming this is your import path
+from vibedir import FileLink  
 
 
 class DemoApp(App):
