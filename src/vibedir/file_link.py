@@ -135,6 +135,45 @@ class FileLink(Widget):
         cmd.append(str(path))
         return cmd
 
+    @staticmethod
+    def eclipse_command(path: Path, line: Optional[int], column: Optional[int]) -> list[str]:
+        """Build Eclipse command."""
+        cmd = ["eclipse"]
+        if line is not None:
+            # Eclipse uses --launcher.openFile path:line format
+            cmd.extend(["--launcher.openFile", f"{path}:{line}"])
+        else:
+            cmd.extend(["--launcher.openFile", str(path)])
+        return cmd
+
+    @staticmethod
+    def copy_path_command(path: Path, line: Optional[int], column: Optional[int]) -> list[str]:
+        """Copy the full path (with line:column) to clipboard.
+        
+        Uses platform-appropriate clipboard commands:
+        - Linux: xclip or xsel
+        - macOS: pbcopy
+        - Windows: clip
+        """
+        import platform
+        
+        # Build the path string with line:column
+        path_str = str(path)
+        if line is not None:
+            path_str += f":{line}"
+            if column is not None:
+                path_str += f":{column}"
+        
+        # Determine clipboard command based on platform
+        system = platform.system()
+        if system == "Darwin":  # macOS
+            return ["bash", "-c", f"echo -n '{path_str}' | pbcopy"]
+        elif system == "Windows":
+            return ["cmd", "/c", f"echo {path_str} | clip"]
+        else:  # Linux/Unix
+            # Try xclip first, fall back to xsel
+            return ["bash", "-c", f"echo -n '{path_str}' | xclip -selection clipboard 2>/dev/null || echo -n '{path_str}' | xsel --clipboard"]
+
     # ------------------------------------------------------------------ #
     # Click handling
     # ------------------------------------------------------------------ #
