@@ -12,7 +12,7 @@ VibeDir is a utility to facilitate code modifications when using an AI assistant
 
 ### User runs: vibedir CLI from the desired working directory
 1. TUI menu pops up with options to:
-  - Start new session (or refresh session) - this loads full session context (dev.md, code change instructions, etc.). Starting a new session backs up the existing prompt.md to prompt.md.{YYYY-MM-DD_HH-MM-SS} and creates a fresh prompt.md file.
+  - Start new/Refresh session - this loads full session context (dev.md, code change instructions, etc.). Starting a new session backs up the existing prompt.md to prompt.md.{YYYY-MM-DD_HH-MM-SS} and creates a fresh prompt.md file. If not chosen the in-process session continues.
   - Define prompt (task, files, command results) for LLM (can be done in prompt.md)
   - Generate prompt (vibedir.txt file split into parts as needed if clipboard mode) that hold task and context information and copy to clipboard or send via API
 
