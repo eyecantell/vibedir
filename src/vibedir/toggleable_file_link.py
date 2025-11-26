@@ -14,7 +14,7 @@ from .file_link import FileLink
 
 
 class ToggleableFileLink(Widget):
-    """A FileLink with an optional toggle (☐/✓) on the left and optional remove (×) on the right."""
+    """A FileLink with an optional toggle (☐/✓) on the left, optional status icon, and optional remove (×) on the right."""
 
     DEFAULT_CSS = """
     ToggleableFileLink {
@@ -41,6 +41,17 @@ class ToggleableFileLink(Widget):
     
     ToggleableFileLink .toggle-static:hover {
         background: $boost;
+    }
+    
+    ToggleableFileLink .status-icon {
+        width: auto;
+        min-width: 2;
+        height: auto;
+        background: transparent;
+        border: none;
+        padding: 0 1 0 0;
+        color: $text;
+        content-align: center middle;
     }
     
     ToggleableFileLink .file-link-container {
@@ -93,6 +104,7 @@ class ToggleableFileLink(Widget):
         initial_toggle: bool = False,
         show_toggle: bool = True,
         show_remove: bool = True,
+        status_icon: Optional[str] = None,
         line: Optional[int] = None,
         column: Optional[int] = None,
         command_builder: Optional[Callable] = None,
@@ -112,6 +124,8 @@ class ToggleableFileLink(Widget):
             Whether to display the toggle component (default: True).
         show_remove : bool
             Whether to display the remove component (default: True).
+        status_icon : str | None
+            Optional unicode icon to display before the filename.
         line, column : int | None
             Optional cursor position to jump to.
         command_builder : Callable | None
@@ -124,6 +138,7 @@ class ToggleableFileLink(Widget):
         self._is_toggled = initial_toggle
         self._show_toggle = show_toggle
         self._show_remove = show_remove
+        self._status_icon = status_icon
         self._line = line
         self._column = column
         self._command_builder = command_builder
@@ -136,6 +151,12 @@ class ToggleableFileLink(Widget):
                     "✓" if self._is_toggled else "☐",
                     id="toggle",
                     classes="toggle-static",
+                )
+            if self._status_icon:
+                yield Static(
+                    self._status_icon,
+                    id="status-icon",
+                    classes="status-icon",
                 )
             yield FileLink(
                 self._path,
@@ -161,6 +182,28 @@ class ToggleableFileLink(Widget):
             self.add_class("disabled")
         else:
             self.remove_class("disabled")
+
+    def set_status_icon(self, icon: Optional[str]) -> None:
+        """Update the status icon.
+        
+        Parameters
+        ----------
+        icon : str | None
+            New icon to display, or None to hide the icon.
+        """
+        self._status_icon = icon
+        
+        # Try to update existing icon if it exists
+        try:
+            status_static = self.query_one("#status-icon", Static)
+            if icon:
+                status_static.update(icon)
+                status_static.display = True
+            else:
+                status_static.display = False
+        except Exception:
+            # Icon doesn't exist yet (shouldn't happen after mount, but handle gracefully)
+            pass
 
     @on(events.Click, "#toggle")
     def _on_toggle_clicked(self, event: events.Click) -> None:
@@ -204,3 +247,8 @@ class ToggleableFileLink(Widget):
     def path(self) -> Path:
         """Get the file path."""
         return self._path
+    
+    @property
+    def status_icon(self) -> Optional[str]:
+        """Get the current status icon."""
+        return self._status_icon

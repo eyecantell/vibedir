@@ -28,6 +28,7 @@ class FileStatus:
             show_toggle=True,
             show_remove=False,
             disable_on_untoggle=False,
+            status_icon="⏳",
         )
     
     def get_selected_link(self) -> ToggleableFileLink:
@@ -38,6 +39,7 @@ class FileStatus:
             show_toggle=True,
             show_remove=True,
             disable_on_untoggle=False,
+            status_icon="⚠",
         )
     
     def get_unselected_link(self) -> ToggleableFileLink:
