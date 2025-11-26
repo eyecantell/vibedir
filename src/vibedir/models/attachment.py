@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 class Attachment(BaseModel):  
     """Base model for attachments in Vibedir history."""
     model_config = ConfigDict(frozen=True)  # Immutable
-
     type: Literal["file", "command"]
     path: Path
     timestamp: datetime = Field(default_factory=datetime.now)

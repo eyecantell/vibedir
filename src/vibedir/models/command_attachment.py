@@ -17,7 +17,7 @@ class CommandAttachment(Attachment):
     output: Optional[str] = None
     success_value: Optional[bool] = None
     output_path: Optional[Path] = None
-    output_format: str = "txt"  # Now flexible str, default txt
+    output_format: str = "txt"
 
     @field_validator("status")
     @classmethod
