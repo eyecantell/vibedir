@@ -28,7 +28,7 @@ VibeDir is a utility to facilitate code modifications when using an AI assistant
 ### Main Menu v2 (three column layout) 'm' for menus list
 Latest changes | Prompt | Command Results
 
-All file names use FileLink class for easy opening
+All file names use [FileLink](https://github.com/eyecantell/textual-filelink) class from [textual-filelink](https://pypi.org/project/textual-filelink/) for easy opening
 
 #### Latest changes column (left) 'd' diff, 'ctrl-r' revert
 Errors: {errors list if errors exist from applying changes}
@@ -39,7 +39,7 @@ Latest changes by {model} (n files):
 - ...
 
 Other changes detected: # these are files that have been changed by user/other since last prompt send and will be automatically added to the prompt (middle column) but can be removed by the user by toggling here or in the middle (prompt) column.
-{✓ if set to be in prompt| ☐ if not set to be in prompt}
+{✓ if set to be in prompt| ☐ if not set to be in prompt} # Note the file listings use textual-filelink.ToggleableFileLink 
 - ✓ file3.md by {username}
 - ☐ file4.py by {username}
 - ...
@@ -76,11 +76,11 @@ The status icons next to each of command will be configurable and have defaults:
 
 {commands with their results in order of configuration}
 
-{✓ if set to be in prompt| ☐ if not set to be in prompt} {command name} {status_icon}
+{✓ if set to be in prompt| ☐ if not set to be in prompt} {status_icon} {command name} # Note these use textual-filelink.ToggleableFileLink 
 - For Example:
-  - ✓ Tests ✅
-  - ✓ Lint ❌
-  - ☐ Format ✅
+  - ✓ ✅ Tests 
+  - ✓ ❌ Lint 
+  - ☐ ✅ Format 
   - ✓ Manual [{number of manual command results included in prompt}]
 
 Toggling inclusion of command results here is reflected in the prompt column's inclusions list.
@@ -95,7 +95,7 @@ Toggling inclusion of command results here is reflected in the prompt column's i
 ### CLI Commands Menu Header (there will be one menu for each of the configured commands)
 - Command Name: {name}
 - Command: {command}
-- Result: [success✅|running⏳|failed❌|not run❓] # uses configured icons plus wording
+- Result: [✅success|{spinner}running|❌failed|❓not run|⏳waiting] # uses configured icons plus wording
 - Result in current prompt: [✓ Yes|☐ No]
 - Run: {run_on}
 - Success determined by: {success_value}
@@ -152,12 +152,13 @@ If the user is in clipboard mode, then the vibedir.txt will be split into (clipb
 
 | Component | Role |
 |---------|------|
-| **`dev.md`** | Development guidelines, style, LLM behavior |
+| **`dev.md`** | File for development guidelines, style, LLM behavior |
 | **`prepdir`** | Clean, private, structured code output |
 | **`applydir`** | Takes changes from LLM (in json described in CODE_CHANGE_INSTRUCTIONS) and applies them to the code base |
 | **`fileclip`** | Clipboard control (for pasting files into UI) |
 | **`vibedir`** | CLI based UI. UI orchestration, clipboard, token math |
 | **`apibump`** | API client (includes LiteLLM wrapper), model metadata, context limits, analytics |
+| **`textual-filelink`** | Provides FileLink and ToggleableFileLink widgets for clickable file names in the TUI ([GitHub](https://github.com/eyecantell/textual-filelink), [PyPI](https://pypi.org/project/textual-filelink/)) |
 
 ---
 
